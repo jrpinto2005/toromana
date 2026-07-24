@@ -62,7 +62,7 @@ demo. Si solo alcanzas a hacer una cosa, que sea esta.
 **Bloque 4 · Ruta de reparto**
 - `src/app/(app)/ruta/` — vista **móvil** para el repartidor: lista del día, marcar
   entregado, reportar efectivo recibido (entra como `por_confirmar`)
-- `src/modules/documents/` — export de la lista a PDF y a CSV
+- `src/modules/documents/` — export de la lista: ruta HTML con `@media print` + CSV
 
 **Bloque 6 · Órdenes de compra** (después de la línea de corte)
 - Template PDF del recibo de entrega, consecutivos, duplicado para institucionales
@@ -76,6 +76,29 @@ demo. Si solo alcanzas a hacer una cosa, que sea esta.
 **Utilidades tuyas**
 - `src/lib/money.ts` — formateo de pesos colombianos
 - `src/lib/dates.ts` — próximo lunes (sugerencia) y formateo de fechas
+
+## Lo que ya está listo (no lo rehagas)
+
+El scaffold, el esquema y las semillas ya están commiteados:
+
+- **Next 16 · React 19 · Tailwind v4 · TypeScript**, App Router con `src/`
+- **Todas las dependencias ya instaladas**: `@supabase/supabase-js`, `@supabase/ssr`,
+  `date-fns`, `recharts`, `lucide-react`, `clsx`, `tailwind-merge`
+- **shadcn/ui inicializado con 16 componentes ya agregados** en `src/components/ui/`:
+  button, input, label, table, card, badge, dialog, select, checkbox, tabs, separator,
+  dropdown-menu, textarea, switch, sonner, skeleton.
+  Si necesitas otro, **pídeselo a A** — no corras `shadcn add` tú
+- **4 migraciones en `supabase/migrations/`**, verificadas contra Postgres 15: esquema,
+  vistas derivadas, RLS y semillas de catálogo
+
+### Dos decisiones de dependencias que te afectan
+
+- **No hay SheetJS/`xlsx`.** El import del Excel corre una sola vez como script de Python
+  con `openpyxl`, fuera del bundle. Para el export de la ruta, **genera el CSV a mano**
+  (es concatenar strings) — no metas una librería para eso.
+- **No hay `@react-pdf/renderer`.** Los recibos y la lista de reparto son **rutas HTML con
+  `@media print`**. Se imprimen directo y salen a PDF con "Guardar como PDF" del navegador.
+  Cero dependencias y cero riesgo de incompatibilidad con React 19.
 
 ## Propiedad de archivos — así no nos pisamos
 
@@ -228,7 +251,8 @@ Mientras A termina el scaffold (primeros ~40 min), puedes escribir sin bloqueart
 1. `src/lib/money.ts` y `src/lib/dates.ts` — puro, sin dependencias
 2. `src/modules/notifications/` — niveles de urgencia y plantillas de WhatsApp: funciones
    puras que reciben datos y devuelven strings. Testeables sin base de datos
-3. Los componentes PDF de `src/modules/documents/` — son React, no necesitan datos reales
+3. Las vistas de impresión de `src/modules/documents/` — son componentes React con
+   estilos `@media print`, no necesitan datos reales para maquetarse
 
 Cuando A haga push del scaffold y el esquema, cableas todo eso y sigues con `payments`,
 que es tu prioridad real.
