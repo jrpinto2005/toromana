@@ -1,3 +1,8 @@
+// Si un componente cliente termina importando esto —normalmente por importar el
+// index.ts de un módulo en vez de sus tipos— el build falla acá, señalando el
+// archivo culpable, en vez de soltar un error confuso sobre el Pages Router.
+import 'server-only'
+
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 

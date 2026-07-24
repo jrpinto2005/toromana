@@ -47,6 +47,25 @@ Módulos: `clients` · `orders` · `payments` · `production` · `documents` ·
 
 1. Un módulo se importa **solo** por su `index.ts`. Nunca
    `import { x } from '@/modules/orders/queries'` desde fuera de `orders`.
+
+   **Excepción, y es obligatoria:** un componente `'use client'` **no puede** importar
+   el `index.ts` de un módulo. Ese index arrastra `queries.ts` → `lib/supabase/server` →
+   `next/headers`, y el bundle del navegador revienta. Los componentes cliente importan
+   sus tipos desde `@/modules/<modulo>/types`, y las acciones desde el `actions.ts` de
+   su propia carpeta de ruta:
+
+   ```ts
+   // ❌ en un componente cliente
+   import type { Payment } from '@/modules/payments'
+
+   // ✅
+   import type { Payment } from '@/modules/payments/types'
+   import { registerPaymentAction } from './actions'
+   ```
+
+   Por eso cada módulo mantiene un `types.ts` sin dependencias de servidor.
+   `lib/supabase/server.ts` importa `server-only`: si alguien se salta la regla, el
+   build falla señalando el archivo culpable.
 2. Las rutas en `app/` orquestan y renderizan; no contienen reglas de negocio.
 3. Los efectos externos (PDF, WhatsApp, Excel) van detrás de una interfaz del módulo.
 

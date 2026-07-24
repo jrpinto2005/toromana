@@ -134,6 +134,34 @@ Si te falta una dependencia o una columna, **no la agregues tú**: avísale a A.
 personas tocando `package-lock.json` o el esquema al tiempo es la forma más rápida de
 perder media hora en conflictos.
 
+## ⚠️ La regla que ya rompió el build una vez
+
+Un componente `'use client'` **no puede importar el `index.ts` de un módulo**. Ese index
+arrastra `queries.ts` → `lib/supabase/server` → `next/headers` hasta el bundle del
+navegador, y el build muere con un error confuso sobre el Pages Router.
+
+```ts
+// ❌ revienta el build
+import type { Payment } from '@/modules/payments'
+import { listPayments } from '@/modules/payments'
+
+// ✅
+import type { Payment } from '@/modules/payments/types'
+import { registerPaymentAction } from './actions'   // server action de tu ruta
+```
+
+**El patrón:** cada módulo tiene un `types.ts` sin dependencias de servidor. Los
+componentes cliente importan tipos de ahí, y todo lo que toque la base pasa por un
+server action declarado en el `actions.ts` de tu propia carpeta de ruta. El componente
+de servidor (`page.tsx`) sí puede importar el `index.ts` y pasar los datos por props.
+
+`lib/supabase/server.ts` importa `server-only`, así que si te saltas la regla el build
+falla señalando el archivo exacto.
+
+Mira `src/modules/clients/` y `src/app/(app)/clientes/` como referencia: `page.tsx` es
+servidor y consulta, `customers-table.tsx` es cliente y solo recibe props y llama
+acciones.
+
 ## Contratos — lo que A te expone
 
 Programa contra estas firmas desde ya. Si aún no existen cuando arranques, créalas como
