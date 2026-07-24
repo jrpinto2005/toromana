@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCop, parseCop } from "@/lib/money";
 import { today } from "@/lib/dates";
-import { registerPayment, type PaymentMethod } from "@/modules/payments";
+import { registerPayment, type PaymentMethod } from "@/modules/payments/client";
 
 type Props = {
   customerId: string;

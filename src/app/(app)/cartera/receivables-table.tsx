@@ -6,6 +6,12 @@ import { MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -13,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PaymentForm } from "./payment-form";
 import { formatCop } from "@/lib/money";
 import { formatAge, formatShortDate } from "@/lib/dates";
 import {
@@ -21,7 +28,7 @@ import {
   whatsAppLink,
   type UrgencyLevel,
 } from "@/modules/notifications";
-import type { Receivable } from "@/modules/payments";
+import type { Receivable } from "@/modules/payments/client";
 import { UrgencyBadge } from "./urgency-badge";
 import { cn } from "@/lib/utils";
 
@@ -31,12 +38,22 @@ type Props = {
   brandName: string;
   /** Vendedores presentes en la lista, para el filtro. */
   sellers: { id: string; name: string }[];
+  handlers: { id: string; fullName: string }[];
+  currentUserId: string;
 };
 
-export function ReceivablesTable({ rows, bankDetails, brandName, sellers }: Props) {
+export function ReceivablesTable({
+  rows,
+  bankDetails,
+  brandName,
+  sellers,
+  handlers,
+  currentUserId,
+}: Props) {
   const [search, setSearch] = useState("");
   const [level, setLevel] = useState<UrgencyLevel | "todos">("todos");
   const [sellerId, setSellerId] = useState<string>("todos");
+  const [paying, setPaying] = useState<Receivable | null>(null);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -105,7 +122,7 @@ export function ReceivablesTable({ rows, bankDetails, brandName, sellers }: Prop
               <TableHead className="text-right">Saldo</TableHead>
               <TableHead>Deuda más antigua</TableHead>
               <TableHead>Vendedor</TableHead>
-              <TableHead className="text-right">Cobrar</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -155,26 +172,31 @@ export function ReceivablesTable({ rows, bankDetails, brandName, sellers }: Prop
                     {row.sellerName ?? "Sin asignar"}
                   </TableCell>
                   <TableCell className="text-right">
-                    {link ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        render={
-                          <a href={link} target="_blank" rel="noopener noreferrer" />
-                        }
-                      >
-                        <MessageCircle />
-                        WhatsApp
+                    <div className="flex items-center justify-end gap-2">
+                      {link ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          render={
+                            <a href={link} target="_blank" rel="noopener noreferrer" />
+                          }
+                        >
+                          <MessageCircle />
+                          WhatsApp
+                        </Button>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                          title="Sin celular registrado: no se puede enviar WhatsApp"
+                        >
+                          <Phone className="size-3" />
+                          Sin celular
+                        </span>
+                      )}
+                      <Button size="sm" onClick={() => setPaying(row)}>
+                        Pago
                       </Button>
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                        title="Sin celular registrado: no se puede enviar WhatsApp"
-                      >
-                        <Phone className="size-3" />
-                        Sin celular
-                      </span>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -187,6 +209,29 @@ export function ReceivablesTable({ rows, bankDetails, brandName, sellers }: Prop
         {filtered.length} cliente{filtered.length === 1 ? "" : "s"} ·{" "}
         <span className="font-medium text-foreground">{formatCop(shownTotal)}</span> en pantalla
       </p>
+
+      <Dialog open={paying !== null} onOpenChange={(open) => !open && setPaying(null)}>
+        <DialogContent className="sm:max-w-md">
+          {paying && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Registrar pago de {paying.customerName}</DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  Saldo actual: {formatCop(paying.balanceCop)}
+                </p>
+              </DialogHeader>
+              <PaymentForm
+                customerId={paying.customerId}
+                customerName={paying.customerName}
+                balanceCop={paying.balanceCop}
+                handlers={handlers}
+                currentUserId={currentUserId}
+                onDone={() => setPaying(null)}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

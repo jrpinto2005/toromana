@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCop } from "@/lib/money";
 import { formatShortDate } from "@/lib/dates";
-import { confirmPayment, type Payment } from "@/modules/payments";
+import { confirmPayment, type Payment } from "@/modules/payments/client";
 
 type Row = Payment & { customerName: string };
 
