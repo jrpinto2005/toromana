@@ -32,9 +32,34 @@ Tailwind + shadcn/ui · `@react-pdf/renderer` · `xlsx` (SheetJS) · deploy en V
 ## Comandos
 
 ```bash
-npm run dev
+npm run dev            # ⚠️ UN SOLO proceso en toda la máquina — ver abajo
 npm run build          # correr antes de cada push: el deploy es continuo
-npx supabase db push   # aplicar migraciones
+npx tsc --noEmit       # typecheck sin escribir en .next, seguro en paralelo
+```
+
+### ⚠️ Un solo `npm run dev`, y `build` no convive con `dev`
+
+Turbopack usa `.next/` como caché con un único escritor: `Only a single write
+operation is allowed at a time`. Dos servidores de desarrollo —o un `build`
+mientras corre un `dev`— la corrompen, y la app empieza a dar 500 con
+`Cannot find module '../chunks/ssr/[turbopack]_runtime.js'`.
+
+Esto importa porque este repo lo trabajan dos agentes en el mismo directorio.
+
+- Solo **un** `npm run dev`, en el puerto 3000. Cambiar de puerto no sirve: el
+  problema es el `.next` compartido, no el puerto.
+- Antes de `npm run build`, baja el `dev`.
+- Para verificar tu código sin tocar `.next`, usa `npx tsc --noEmit`.
+- Si ya se corrompió: `pkill -f "next dev" && rm -rf .next && npm run dev`.
+
+### Migraciones
+
+La base está en Supabase. `psql` conecta por el pooler de la región del proyecto
+(el host `db.<ref>.supabase.co` ya no resuelve en proyectos nuevos):
+
+```bash
+PGPASSWORD=... psql -h aws-0-<region>.pooler.supabase.com -p 5432 \
+  -U postgres.<project-ref> -d postgres -f supabase/migrations/000X_*.sql
 ```
 
 ## Reglas de arquitectura

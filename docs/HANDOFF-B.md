@@ -134,6 +134,28 @@ Si te falta una dependencia o una columna, **no la agregues tú**: avísale a A.
 personas tocando `package-lock.json` o el esquema al tiempo es la forma más rápida de
 perder media hora en conflictos.
 
+## ⚠️ No levantes un segundo `npm run dev`
+
+Trabajamos en el mismo directorio y Turbopack usa `.next/` como caché con un solo
+escritor. Dos servidores de desarrollo la corrompen y la app empieza a dar 500 con
+`Cannot find module '../chunks/ssr/[turbopack]_runtime.js'`. Ya pasó una vez.
+
+- Hay **uno** corriendo en **http://localhost:3000**. Úsalo, no levantes otro.
+  Cambiar de puerto no arregla nada: lo compartido es el `.next`, no el puerto.
+- Tampoco corras `npm run build` con el `dev` arriba. Para verificar tu código usa
+  **`npx tsc --noEmit`**, que no escribe en `.next`.
+- Si ya se rompió: `pkill -f "next dev" && rm -rf .next && npm run dev`.
+
+## Ya hay datos reales en la base
+
+Supabase está migrado y cargado: 156 clientes, 33 fijos semanales, 41 líneas de pedido
+fijo, 6 clientes con $580.000 de cartera, 6 productos y los 4 perfiles del equipo.
+Las credenciales están en `.env.local`. No necesitas sembrar nada.
+
+Verificado contra la base real: RLS bloquea la lectura anónima, y reparto **no puede**
+insertar un pago `confirmado` (falla con `42501`). Si tu código intenta hacerlo, la
+base lo va a rechazar — es el diseño, no un bug.
+
 ## ⚠️ La regla que ya rompió el build una vez
 
 Un componente `'use client'` **no puede importar el `index.ts` de un módulo**. Ese index
