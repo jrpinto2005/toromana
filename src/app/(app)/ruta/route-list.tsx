@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Check, MapPin, Phone, Undo2 } from "lucide-react";
+import { Check, MapPin, Phone, Receipt, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -132,7 +133,15 @@ function StopCard({
           </p>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            render={<Link href={`/ruta/recibo/${stop.orderId}`} target="_blank" />}
+          >
+            <Receipt />
+            Recibo
+          </Button>
           <Button size="sm" variant="outline" onClick={onReportCash}>
             Reportar efectivo
           </Button>

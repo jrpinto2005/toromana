@@ -1,7 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DeliveryRunSummary, RouteStop } from "./types";
+import type { DeliveryRunSummary, Receipt, RouteStop } from "./types";
 
-type CustomerRef = { id: string; name: string; address: string | null; phone: string | null };
+type CustomerRef = {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  legal_name?: string | null;
+  nit?: string | null;
+  po_note?: string | null;
+};
 type ProductRef = { name: string; unit: string };
 
 /** Supabase entrega relaciones anidadas como objeto o arreglo según el join. */
@@ -96,4 +104,76 @@ export async function getRouteStops(runId: string): Promise<RouteStop[]> {
       }),
     };
   });
+}
+
+/**
+ * Datos completos para imprimir un recibo: pedido, cliente, empresa y el
+ * consecutivo ya generado si lo hay. No genera el número aquí — eso lo hace
+ * `generatePurchaseOrdersForRun` una sola vez, al confirmar.
+ */
+export async function getReceipt(orderId: string): Promise<Receipt | null> {
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select(
+      `id, total_cop, run:delivery_runs(delivery_date),
+       customer:customers(name, address, legal_name, nit, po_note),
+       order_items(quantity, unit_price_cop, subtotal_cop, products(name, unit))`,
+    )
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) return null;
+
+  const customer = one(order.customer as unknown as CustomerRef | CustomerRef[]);
+  const run = one(order.run as unknown as { delivery_date: string } | { delivery_date: string }[]);
+  const items = (order.order_items ?? []) as Array<{
+    quantity: number;
+    unit_price_cop: number;
+    subtotal_cop: number;
+    products: ProductRef | ProductRef[] | null;
+  }>;
+
+  const [{ data: company }, { data: po }] = await Promise.all([
+    supabase
+      .from("company_settings")
+      .select("legal_name, tax_id, brand_name, contact_block")
+      .maybeSingle(),
+    supabase
+      .from("purchase_orders")
+      .select("sequence_name, number, copies")
+      .eq("order_id", orderId)
+      .maybeSingle(),
+  ]);
+
+  return {
+    orderId: order.id,
+    deliveryDate: run?.delivery_date ?? "",
+    customerName: customer?.name ?? "Cliente",
+    customerAddress: customer?.address ?? null,
+    customerLegalName: customer?.legal_name ?? null,
+    customerNit: customer?.nit ?? null,
+    customerPoNote: customer?.po_note ?? null,
+    items: items.map((item) => {
+      const product = one(item.products);
+      return {
+        productName: product?.name ?? "Producto",
+        unit: product?.unit ?? "",
+        quantity: Number(item.quantity),
+        unitPriceCop: item.unit_price_cop,
+        subtotalCop: item.subtotal_cop,
+      };
+    }),
+    totalCop: order.total_cop,
+    company: {
+      legalName: company?.legal_name ?? "",
+      taxId: company?.tax_id ?? "",
+      brandName: company?.brand_name ?? "",
+      contactBlock: company?.contact_block ?? "",
+    },
+    purchaseOrder: po
+      ? { sequenceName: po.sequence_name, number: po.number, copies: po.copies }
+      : null,
+  };
 }

@@ -29,3 +29,31 @@ export type RouteStop = {
   note: string | null;
   items: RouteItem[];
 };
+
+export type ReceiptItem = {
+  productName: string;
+  unit: string;
+  quantity: number;
+  unitPriceCop: number;
+  subtotalCop: number;
+};
+
+/** Todo lo que necesita la plantilla del recibo — encabezado ya resuelto contra `company_settings`. */
+export type Receipt = {
+  orderId: string;
+  deliveryDate: IsoDate;
+  customerName: string;
+  customerAddress: string | null;
+  customerLegalName: string | null;
+  customerNit: string | null;
+  customerPoNote: string | null;
+  items: ReceiptItem[];
+  totalCop: number;
+  company: {
+    legalName: string;
+    taxId: string;
+    brandName: string;
+    contactBlock: string;
+  };
+  purchaseOrder: { sequenceName: string; number: number; copies: number } | null;
+};

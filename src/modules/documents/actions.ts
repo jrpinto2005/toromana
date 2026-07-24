@@ -46,3 +46,60 @@ export async function undoDelivered(orderId: string): Promise<ActionResult> {
   revalidatePath("/ruta");
   return { ok: true };
 }
+
+/**
+ * Genera las órdenes de compra de un pedido confirmado: una por cada cliente
+ * institucional que las requiera, con el consecutivo de su secuencia
+ * (`general` o `institucional_b`) y sus copias.
+ *
+ * Es lo único que este módulo le expone a A — se llama una vez, al confirmar
+ * el pedido semanal. `next_document_number` avanza el contador de forma
+ * atómica: nunca se lee y escribe a mano, o dos confirmaciones al tiempo
+ * repetirían un número.
+ */
+export async function generatePurchaseOrdersForRun(
+  runId: string,
+): Promise<{ generated: number }> {
+  const supabase = await createClient();
+
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select(
+      "id, customer:customers(requires_purchase_order, po_sequence, po_copies)",
+    )
+    .eq("run_id", runId)
+    .neq("status", "omitido");
+
+  if (error) throw new Error(`No pude leer el pedido: ${error.message}`);
+
+  const today = new Date().toISOString().slice(0, 10);
+  let generated = 0;
+
+  for (const order of orders ?? []) {
+    const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer;
+    if (!customer?.requires_purchase_order || !customer.po_sequence) continue;
+
+    const { data: number, error: numberError } = await supabase.rpc(
+      "next_document_number",
+      { seq: customer.po_sequence },
+    );
+    if (numberError) {
+      throw new Error(`No pude generar el consecutivo: ${numberError.message}`);
+    }
+
+    const { error: insertError } = await supabase.from("purchase_orders").insert({
+      order_id: order.id,
+      sequence_name: customer.po_sequence,
+      number,
+      issue_date: today,
+      copies: customer.po_copies ?? 1,
+    });
+    if (insertError) {
+      throw new Error(`No pude guardar la orden de compra: ${insertError.message}`);
+    }
+
+    generated += 1;
+  }
+
+  return { generated };
+}
