@@ -49,6 +49,11 @@ export const NAV: NavItem[] = [
     label: 'Ajustes',
     roles: ['admin'],
   },
+  {
+    href: '/usuarios',
+    label: 'Usuarios',
+    roles: ['admin'],
+  },
 ]
 
 export function navFor(role: UserRole): NavItem[] {

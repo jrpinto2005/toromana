@@ -20,18 +20,20 @@ export default function LoginPage() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Toromana</h1>
           <p className="text-sm text-muted-foreground">
-            Entra con tu correo para continuar.
+            Entra con tu usuario o tu correo.
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Correo</Label>
+            <Label htmlFor="identifier">Usuario o correo</Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
+              id="identifier"
+              name="identifier"
+              type="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               required
               autoFocus
             />
