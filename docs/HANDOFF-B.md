@@ -11,7 +11,7 @@ campesinos, moras, mermelada, miel y cítricos, y los entrega semanalmente a ~15
 Hoy todo vive en un archivo de Excel de 59 hojas: cada semana alguien clona una pestaña,
 revisa WhatsApps para saber quién entra y quién sale de la lista, edita órdenes de compra
 a mano en Word, y a fin de mes corre una macro para sacar la cartera. Se pierde plata:
-~$480.000 sin cobrar en un solo mes, y cuentas que se dejan correr 3 o 4 meses.
+~$580.000 sin cobrar en un solo mes, y cuentas que se dejan correr 3 o 4 meses.
 
 Es una **hackathon de 9 horas**. El producto tiene que quedar desplegado y funcionando.
 

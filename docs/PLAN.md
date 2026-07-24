@@ -177,7 +177,7 @@ Todo lo que sigue suma, pero se sacrifica sin dolor.
 
 ## Guion de demo (3 minutos)
 
-1. **El dolor** (20 s) — Se muestra el `.xlsm` real: 59 hojas, la macro, los $480.000 en
+1. **El dolor** (20 s) — Se muestra el `.xlsm` real: 59 hojas, la macro, los $580.000 en
    la columna `Debe`. *"Así se maneja hoy un negocio de verdad."*
 2. **El pedido semanal** (60 s) — Crear pedido: la app propone el martes porque el lunes
    es festivo. La lista se arma sola con 33 clientes fijos; dos están en gris porque

@@ -66,6 +66,13 @@ export type CustomerStatement = {
   pendingCashCop: number;
 };
 
+/**
+ * Resultado de una acción de escritura. Se devuelve el error en vez de lanzarlo
+ * porque quien lo consume es un formulario, no un log: el usuario tiene que leer
+ * qué pasó sin que la pantalla se caiga.
+ */
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
 export type RegisterPaymentInput = {
   customerId: string;
   amountCop: number;

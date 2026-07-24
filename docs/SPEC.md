@@ -15,7 +15,7 @@ Fallas medidas sobre el archivo real:
 | Falla | Evidencia en el `.xlsm` |
 |---|---|
 | Clientes duplicados parten la cartera | El mismo cliente escrito con un espacio al final, o con mayúscula distinta, aparece como **dos filas separadas** en la hoja mensual |
-| Cartera perdida | ~$480.000 en la columna `Debe` de un solo mes, repartidos en 6 clientes |
+| Cartera perdida | ~$580.000 en la columna `Debe` de un solo mes, repartidos en 6 clientes |
 | Datos codificados en texto | `"Nombre: 2 huevos"`, `"Nombre c/ 15 dias"` |
 | Precios hardcodeados | Fila 39 de cada hoja semanal, se re-teclea cada vez |
 | Sin trazabilidad de quién cobró | La macro agrega por nombre; Admin no sabe si Producción ya cobró |
