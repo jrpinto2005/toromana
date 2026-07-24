@@ -23,7 +23,7 @@ HTTP, y nada más se toca. Si esa operación requiere tocar otros módulos, la f
 
 | Capa | Elección | Por qué |
 |---|---|---|
-| Framework | **Next.js 15** (App Router) + TypeScript | Un solo deploy para UI y backend |
+| Framework | **Next.js 16** (App Router) + TypeScript | Un solo deploy para UI y backend |
 | BD | **Supabase** (Postgres) | Postgres real, no un ORM propietario |
 | Auth | **Supabase Auth** | 4 usuarios sembrados, signup cerrado |
 | Colaboración | **Supabase Realtime** | Los 3 vendedores editando el mismo pedido, gratis |

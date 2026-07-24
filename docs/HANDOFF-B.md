@@ -122,7 +122,7 @@ src/lib/dates.ts
 package.json · package-lock.json     ← A instala TODAS las dependencias de entrada
 supabase/migrations/                  ← A es el único que toca el esquema
 src/lib/supabase/
-src/middleware.ts
+src/proxy.ts                           ← guarda de sesión (Next 16 renombró middleware)
 src/app/(app)/layout.tsx              ← A deja la navegación completa desde el inicio
 src/app/(auth)/
 src/modules/clients/
