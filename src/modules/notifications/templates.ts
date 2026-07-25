@@ -71,31 +71,31 @@ export function collectionMessage(ctx: CollectionContext): string {
 
     case "reciente":
       lines.push(
-        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
+        `${greeting}tengo tu cuenta pendiente desde el${since} por ${amount}, te cuadra?`,
       );
       break;
 
     case "atencion":
       lines.push(
-        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
+        `${greeting}tengo tu cuenta pendiente desde el${since} por ${amount}, te cuadra?`,
       );
       break;
 
     case "urgente":
       lines.push(
-        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
+        `${greeting}tengo tu cuenta pendiente desde el${since} por ${amount}, te cuadra?`,
       );
       break;
 
     case "critico":
       lines.push(
-        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
+        `${greeting}tengo tu cuenta pendiente desde el${since} por ${amount}, te cuadra?`,
       );
       break;
   }
 
   if (ctx.bankDetails?.trim()) {
-    lines.push(`Puedes pagar por transferencia a:\n${ctx.bankDetails.trim()}`);
+    lines.push(`Los datos para transderir son:\n${ctx.bankDetails.trim()}`);
   }
 
 

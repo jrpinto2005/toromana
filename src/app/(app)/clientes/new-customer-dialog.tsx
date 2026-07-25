@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import type { Seller } from '@/modules/clients'
 import { createCustomerAction, type ActionState } from './actions'
@@ -28,24 +28,28 @@ const initialState: ActionState = { error: null, message: null }
 
 export function NewCustomerDialog({ sellers }: { sellers: Seller[] }) {
   const [open, setOpen] = useState(false)
-  const [state, formAction, pending] = useActionState(
-    createCustomerAction,
-    initialState,
-  )
+  // El resultado se atiende dentro de la transición, no en un efecto: cerrar
+  // el diálogo desde un `useEffect` provoca renders en cascada y React 19 lo
+  // marca como error. Aquí el `setState` ocurre en el manejador, que es su sitio.
+  const [pending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (state.message) {
-      toast.success(state.message)
+  function submit(formData: FormData) {
+    startTransition(async () => {
+      const result = await createCustomerAction(initialState, formData)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      if (result.message) toast.success(result.message)
       setOpen(false)
-    }
-    if (state.error) toast.error(state.error)
-  }, [state])
+    })
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>Nuevo cliente</DialogTrigger>
       <DialogContent>
-        <form action={formAction} className="space-y-4">
+        <form action={submit} className="space-y-4">
           <DialogHeader>
             <DialogTitle>Nuevo cliente</DialogTitle>
             <DialogDescription>

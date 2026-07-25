@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import type { Customer, Seller } from '@/modules/clients'
 import { assignSellerAction, type ActionState } from './actions'
@@ -36,18 +36,21 @@ export function CustomersTable({
   const [search, setSearch] = useState('')
   const [onlyUnassigned, setOnlyUnassigned] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [state, formAction, pending] = useActionState(
-    assignSellerAction,
-    initialState,
-  )
+  // Limpiar la selección dentro de la transición y no en un efecto: así el
+  // `setState` ocurre en el manejador, que es donde React lo espera.
+  const [pending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (state.message) {
-      toast.success(state.message)
+  function assign(formData: FormData) {
+    startTransition(async () => {
+      const result = await assignSellerAction(initialState, formData)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      if (result.message) toast.success(result.message)
       setSelected(new Set())
-    }
-    if (state.error) toast.error(state.error)
-  }, [state])
+    })
+  }
 
   const sellerName = useMemo(
     () => new Map(sellers.map((s) => [s.id, s.fullName])),
@@ -112,7 +115,7 @@ export function CustomersTable({
 
       {selected.size > 0 && (
         <form
-          action={formAction}
+          action={assign}
           className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3"
         >
           {[...selected].map((id) => (

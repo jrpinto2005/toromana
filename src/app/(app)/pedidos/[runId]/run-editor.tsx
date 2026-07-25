@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -51,21 +51,32 @@ export function RunEditor({
   // vuelta al papel. Cada cambio se refleja en la cartera al instante.
   const confirmed = run.status !== 'borrador'
 
-  const [addState, addAction, adding] = useActionState(addCustomerAction, initial)
-  const [confirmState, confirmAction, confirming] = useActionState(
-    confirmRunAction,
-    initial,
-  )
+  // El buscador se limpia cuando la acción confirma. Se lleva en un contador
+  // y no en un efecto: limpiarlo en el clic desmontaba el formulario antes de
+  // que el envío saliera del navegador, y el cliente nunca llegaba a agregarse.
+  const [addedCount, setAddedCount] = useState(0)
+  const [adding, startTransition] = useTransition()
+  const [confirming, startConfirm] = useTransition()
 
-  useEffect(() => {
-    if (addState.error) toast.error(addState.error)
-    if (addState.message) toast.success(addState.message)
-  }, [addState])
+  function addAction(formData: FormData) {
+    startTransition(async () => {
+      const result = await addCustomerAction(initial, formData)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      if (result.message) toast.success(result.message)
+      setAddedCount((n) => n + 1)
+    })
+  }
 
-  useEffect(() => {
-    if (confirmState.error) toast.error(confirmState.error)
-    if (confirmState.message) toast.success(confirmState.message)
-  }, [confirmState])
+  function confirmAction(formData: FormData) {
+    startConfirm(async () => {
+      const result = await confirmRunAction(initial, formData)
+      if (result.error) toast.error(result.error)
+      else if (result.message) toast.success(result.message)
+    })
+  }
 
   // Los tres vendedores editan el mismo pedido. Cuando uno agrega o quita a
   // alguien, los demás lo ven sin refrescar: es lo que reemplaza el ida y
@@ -94,12 +105,17 @@ export function RunEditor({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
+        {/* La `key` cambia cada vez que se agrega un cliente, y React remonta
+            el buscador vacío. Es la forma que React documenta para reiniciar
+            estado, y evita el efecto que limpiaba el campo — que además, si se
+            hacía en el clic, desmontaba el formulario antes de que el envío
+            saliera y el cliente nunca se agregaba. */}
         <AddCustomer
+          key={addedCount}
           runId={run.id}
           candidates={candidates}
           action={addAction}
           pending={adding}
-          added={addState.message}
         />
         <span className="text-xs text-muted-foreground">
           Los cambios se guardan solos.
@@ -189,22 +205,13 @@ function AddCustomer({
   candidates,
   action,
   pending,
-  added,
 }: {
   runId: string
   candidates: Candidate[]
   action: (formData: FormData) => void
   pending: boolean
-  added: string | null
 }) {
   const [query, setQuery] = useState('')
-
-  // El buscador se limpia cuando la acción CONFIRMA, no al hacer clic.
-  // Limpiarlo en el onClick desmontaba el formulario antes de que el envío
-  // saliera del navegador, y el cliente nunca llegaba a agregarse.
-  useEffect(() => {
-    if (added) setQuery('')
-  }, [added])
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()

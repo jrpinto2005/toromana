@@ -106,7 +106,10 @@ Que un cliente no esté hoy debe ser una decisión visible, no un silencio.
 Los tres vendedores editan el mismo pedido **en tiempo real** (Supabase Realtime).
 - Cada uno ve sus clientes destacados, pero puede tocar los de todos.
 - Agregar cliente ocasional, quitar cliente, ajustar cantidades, ajustar precio.
-- Cada cambio queda con autor y hora.
+- Quien agrega un cliente a mano queda registrado, igual que quien entrega y
+  quien recibe un pago. **No hay bitácora de cada cambio de cantidad**: se
+  evaluó y no se construyó, porque el valor está en saber quién metió a alguien
+  a la lista, no en auditar cada tecla.
 
 Esto reemplaza el ida y vuelta de WhatsApp que hoy es la fuente principal de error.
 

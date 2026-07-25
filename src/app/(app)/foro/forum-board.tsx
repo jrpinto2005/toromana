@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { formatShortDate } from '@/lib/dates'
 import { KIND_LABEL, type Post, type PostKind } from '@/modules/forum/types'
@@ -94,19 +94,23 @@ export function ForumBoard({
 }
 
 function NewPostForm({ customers, runs }: { customers: Ref[]; runs: RunRef[] }) {
-  const [state, formAction, pending] = useActionState(createPostAction, initial)
   const [kind, setKind] = useState<PostKind>('nota')
   const [customerQuery, setCustomerQuery] = useState('')
   const [customer, setCustomer] = useState<Ref | null>(null)
+  const [pending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (state.error) toast.error(state.error)
-    if (state.message) {
-      toast.success(state.message)
+  function formAction(formData: FormData) {
+    startTransition(async () => {
+      const result = await createPostAction(initial, formData)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      if (result.message) toast.success(result.message)
       setCustomer(null)
       setCustomerQuery('')
-    }
-  }, [state])
+    })
+  }
 
   const matches = useMemo(() => {
     const q = customerQuery.trim().toLowerCase()
@@ -194,15 +198,16 @@ function PostCard({
   post: Post
   currentUserId: string
 }) {
-  const [replyState, replyFormAction, replying] = useActionState(
-    replyAction,
-    initial,
-  )
   const [showReply, setShowReply] = useState(false)
+  const [replying, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (replyState.error) toast.error(replyState.error)
-  }, [replyState])
+  function replyFormAction(formData: FormData) {
+    startTransition(async () => {
+      const result = await replyAction(initial, formData)
+      if (result.error) toast.error(result.error)
+      else setShowReply(false)
+    })
+  }
 
   const resolved = Boolean(post.resolvedAt)
 

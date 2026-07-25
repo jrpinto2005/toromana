@@ -10,19 +10,23 @@ function fail(error: string): ActionResult {
 }
 
 /** Reparto marca una entrega hecha. RLS (`orders_delivery_update`) ya restringe esto al rol. */
+/**
+ * Marcar una entrega pasa por una función de base de datos, no por un UPDATE.
+ *
+ * Quien reparte ya no tiene permiso de escritura sobre `orders`: la función
+ * verifica el rol y toca únicamente el estado y la marca de tiempo. Un error de
+ * dedo en un celular, caminando entre entregas, no debería poder mover el total
+ * de una orden ni reasignarla de cliente.
+ */
 export async function markDelivered(orderId: string): Promise<ActionResult> {
   const profile = await getProfile();
   if (!profile) return fail("Sesión expirada. Vuelve a entrar.");
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      status: "entregado",
-      delivered_at: new Date().toISOString(),
-      delivered_by: profile.id,
-    })
-    .eq("id", orderId);
+  const { error } = await supabase.rpc("mark_order_delivered", {
+    order_id: orderId,
+    delivered: true,
+  });
 
   if (error) return fail(`No se pudo marcar la entrega: ${error.message}`);
 
@@ -36,10 +40,10 @@ export async function undoDelivered(orderId: string): Promise<ActionResult> {
   if (!profile) return fail("Sesión expirada. Vuelve a entrar.");
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: "pendiente", delivered_at: null, delivered_by: null })
-    .eq("id", orderId);
+  const { error } = await supabase.rpc("mark_order_delivered", {
+    order_id: orderId,
+    delivered: false,
+  });
 
   if (error) return fail(`No se pudo deshacer la entrega: ${error.message}`);
 

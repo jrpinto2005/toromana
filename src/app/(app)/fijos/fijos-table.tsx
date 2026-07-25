@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { formatCop } from '@/lib/money'
 import type { Product } from '@/modules/clients/types'
@@ -43,17 +43,21 @@ export function FijosTable({
   products: Product[]
 }) {
   const [search, setSearch] = useState('')
-  const [addState, addAction, adding] = useActionState(addToFijosAction, initial)
+  // El buscador se limpia cuando la acción CONFIRMA, no al hacer clic:
+  // limpiarlo antes desmonta el formulario y cancela el envío.
+  const [adding, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (addState.error) toast.error(addState.error)
-    // Se limpia al confirmar, no al hacer clic: limpiarlo antes desmonta el
-    // formulario y cancela el envío.
-    if (addState.message) {
-      toast.success(addState.message)
+  function addAction(formData: FormData) {
+    startTransition(async () => {
+      const result = await addToFijosAction(initial, formData)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      if (result.message) toast.success(result.message)
       setSearch('')
-    }
-  }, [addState])
+    })
+  }
 
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase()

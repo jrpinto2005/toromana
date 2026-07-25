@@ -104,7 +104,14 @@ la frontera está mal.
 - **Cantidades**: `numeric(10,2)`. Las fracciones son reales — media cubeta de huevos
   (`0.5`) es una venta legítima, no un error de digitación.
 - **Precios**: se **congelan** en `order_items.unit_price_cop` al confirmar. Cambiar el
-  precio de lista jamás reescribe la historia.
+  precio de lista jamás reescribe la historia. Los **totales** en cambio se recalculan
+  desde las líneas en cada cambio, porque un pedido confirmado se sigue editando y la
+  cartera tiene que seguir la corrección.
+- **Curva de postura**: un lote tiene DOS picos con una muda en medio, no uno. Ver
+  `src/modules/production/curve.ts`. El planificador existe para escalonar las compras
+  de modo que el pico de un lote caiga sobre el valle de otro.
+- **Reparto** no tiene UPDATE sobre `orders`: marca entregas por la función
+  `mark_order_delivered`, que solo toca estado y marca de tiempo.
 - **Saldos**: se **derivan** de las vistas FIFO (`v_customer_debt`), nunca se almacenan.
   Un saldo guardado se desincroniza; uno derivado no puede mentir.
 - **Fechas de entrega**: normalmente lunes, martes cuando el lunes es festivo. **Se
