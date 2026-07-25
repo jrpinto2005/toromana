@@ -27,7 +27,9 @@ type LotHistory = {
   active: boolean
 }
 
-const HORIZON = 52
+// Año y medio: con un ciclo de 58 semanas por lote, 52 no alcanza a mostrar
+// si la muda del lote nuevo va a caer sobre el pico de otro o sobre su valle.
+const HORIZON = 78
 
 export function PlanView({
   lots,
@@ -51,7 +53,12 @@ export function PlanView({
   // La meta arranca en la demanda comprometida, no en un número redondo: la
   // pregunta del negocio no es "cuántos huevos queremos" sino "cuántos nos
   // están pidiendo".
-  const [target, setTarget] = useState(demandPerWeek || 2200)
+  // El campo guarda TEXTO, no número. Guardar el número obliga a convertir el
+  // vacío en 0, y entonces el 0 queda pegado en el campo y escribir 3000 deja
+  // "03000". El número se deriva al usarlo.
+  const [targetText, setTargetText] = useState(String(demandPerWeek || 2200))
+  const target = Number(targetText) || 0
+  const setTarget = (value: number) => setTargetText(String(value))
   const [scenario, setScenario] = useState<{
     fromWeek: number
     weeks: number
@@ -136,8 +143,8 @@ export function PlanView({
             type="number"
             step={100}
             min={0}
-            value={target}
-            onChange={(e) => setTarget(Number(e.target.value) || 0)}
+            value={targetText}
+            onChange={(e) => setTargetText(e.target.value)}
             className="w-36"
           />
         </div>
@@ -251,10 +258,13 @@ function ModelNote({
           </span>
         </div>
         <p className="mt-1 text-muted-foreground">
-          Lo que manda es el tiempo en galpón: pico de{' '}
-          {model.params.peakRate.toFixed(2)} huevos por gallina al día hacia las{' '}
-          {Math.round(model.params.onsetWeeks + 4)} semanas, sostenido hasta la{' '}
-          {Math.round(model.params.plateauWeeks)} y en declive desde ahí. Error
+          Lo que manda es el tiempo en galpón. Un lote llega a{' '}
+          {model.params.peakRate.toFixed(2)} huevos por gallina al día hacia la
+          semana {Math.round(model.params.riseMid + 6)}, entra en muda sobre la{' '}
+          {Math.round(model.params.moltStart)} —donde cae al{' '}
+          {Math.round((1 - model.params.moltDepth) * 100)}%— y vuelve a un
+          segundo pico pasada la {Math.round(model.params.moltEnd)}. El declive
+          final arranca en la {Math.round(model.params.declineStart)}. Error
           medio: {model.rmse.toFixed(3)} huevos por gallina al día.
           {!learned && (
             <>

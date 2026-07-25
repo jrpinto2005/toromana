@@ -315,15 +315,22 @@ def _seed_lots(created: dict, save) -> None:
     # edad no ponen igual —raza, alimento, época de entrada— y sin esa diferencia
     # todas las franjas del gráfico subirían y bajarían en paralelo, que es
     # justamente lo que no pasa en un galpón real.
+    # Cada lote trae su productividad, y además su propia muda: ni empieza la
+    # misma semana ni cae lo mismo. Sin esa variación las curvas quedarían
+    # calcadas y desfasadas, que es lo que las hace ver artificiales.
+    #
+    # Las edades están escogidas para que el galpón muestre el problema: dos
+    # lotes entran en muda casi al tiempo y la suma se hunde.
+    #     código,     aves, edad, raza,            factor, muda_ini, muda_fin, profundidad
     lots_spec = [
-        ("L-2025-A", 180, 64, "Lohmann Brown", 1.06),  # buen lote, ya debió salir
-        ("L-2025-B", 150, 40, "Lohmann Brown", 0.93),  # flojo desde el arranque
-        ("L-2026-A", 170, 16, "Isa Brown", 1.09),      # el mejor del galpón
-        ("L-2026-B", 200, 3, "Isa Brown", 0.97),       # todavía sin poner
+        ("L-2025-A", 180, 52, "Lohmann Brown", 1.06, 25.0, 34.0, 0.62),
+        ("L-2025-B", 150, 44, "Lohmann Brown", 0.93, 27.5, 36.5, 0.70),
+        ("L-2026-A", 170, 22, "Isa Brown", 1.09, 26.0, 34.5, 0.60),
+        ("L-2026-B", 200, 5, "Isa Brown", 0.97, 27.0, 35.5, 0.67),
     ]
 
     today = date.today()
-    for code, hens, age_weeks, breed, factor in lots_spec:
+    for code, hens, age_weeks, breed, factor, molt_a, molt_b, depth in lots_spec:
         entry = today - timedelta(weeks=age_weeks)
         lot = call(
             "POST",
@@ -334,7 +341,7 @@ def _seed_lots(created: dict, save) -> None:
                     "entry_date": entry.isoformat(),
                     "initial_count": hens,
                     "breed": breed,
-                    "expected_exit_date": (entry + timedelta(weeks=52)).isoformat(),
+                    "expected_exit_date": (entry + timedelta(weeks=58)).isoformat(),
                 }
             ],
             prefer="return=representation",
@@ -363,8 +370,11 @@ def _seed_lots(created: dict, save) -> None:
                 )
 
             week_of_year = week_start.isocalendar()[1] % 52
-            normal, small = weekly_eggs(alive, week_index, factor, week_of_year)
-            noise = random.uniform(0.97, 1.03)
+            normal, small = weekly_eggs(
+                alive, week_index, factor, week_of_year,
+                molt_start=molt_a, molt_end=molt_b, molt_depth=depth,
+            )
+            noise = random.uniform(0.96, 1.04)
             normal, small = round(normal * noise), round(small * noise)
 
             if normal > 0:
