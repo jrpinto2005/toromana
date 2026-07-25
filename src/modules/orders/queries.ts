@@ -122,12 +122,7 @@ export async function getRunDetail(runId: string): Promise<RunDetail | null> {
       status: r.status,
       source: r.source,
       note: r.note,
-      // El total guardado se congela al confirmar. Mientras el pedido está en
-      // borrador se muestra la suma en vivo de las líneas.
-      totalCop:
-        run.status === 'borrador'
-          ? items.reduce((sum, i) => sum + i.subtotalCop, 0)
-          : r.total_cop,
+      totalCop: items.reduce((sum, i) => sum + i.subtotalCop, 0),
       items,
     }
   })

@@ -10,7 +10,9 @@ export type {
   Customer,
   CustomerKind,
   CustomerPause,
+  Product,
   Recurrence,
+  Seller,
   StandingItem,
 } from './types'
 
@@ -18,12 +20,11 @@ export {
   listCustomers,
   getCustomer,
   getStandingItems,
+  getAllStandingItems,
   getActivePauses,
   listProducts,
   listSellers,
   type CustomerFilter,
-  type Product,
-  type Seller,
 } from './queries'
 
 export {
@@ -31,6 +32,8 @@ export {
   updateCustomer,
   assignSeller,
   setStandingItems,
+  setStandingItem,
+  setRecurrence,
   createPause,
   deletePause,
   type CustomerInput,

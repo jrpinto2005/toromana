@@ -122,6 +122,51 @@ export async function setStandingItems(
   if (error) throw new Error(`No pude guardar el pedido fijo: ${error.message}`)
 }
 
+/** Cambia una sola celda del pedido habitual. Cantidad 0 quita el producto. */
+export async function setStandingItem(
+  customerId: string,
+  productId: string,
+  quantity: number,
+): Promise<void> {
+  const supabase = await createClient()
+
+  if (quantity <= 0) {
+    const { error } = await supabase
+      .from('standing_order_items')
+      .delete()
+      .eq('customer_id', customerId)
+      .eq('product_id', productId)
+    if (error) throw new Error(`No pude quitar el producto: ${error.message}`)
+    return
+  }
+
+  const { error } = await supabase
+    .from('standing_order_items')
+    .upsert(
+      { customer_id: customerId, product_id: productId, quantity },
+      { onConflict: 'customer_id,product_id' },
+    )
+  if (error) throw new Error(`No pude guardar la cantidad: ${error.message}`)
+}
+
+/**
+ * Mete o saca a un cliente de la lista de fijos.
+ *
+ * Sacarlo no borra su pedido habitual: si vuelve a entrar, vuelve con lo mismo
+ * que pedía antes. Un cliente que se va y regresa es normal en este negocio.
+ */
+export async function setRecurrence(
+  customerId: string,
+  recurrence: Recurrence,
+): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('customers')
+    .update({ recurrence })
+    .eq('id', customerId)
+  if (error) throw new Error(`No pude cambiar la frecuencia: ${error.message}`)
+}
+
 export async function createPause(input: {
   customerId: string
   startsOn: string

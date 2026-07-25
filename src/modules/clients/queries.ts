@@ -6,6 +6,8 @@ import {
   type CustomerPause,
   type CustomerRow,
   type Recurrence,
+  type Product,
+  type Seller,
   type StandingItem,
 } from './types'
 
@@ -91,11 +93,24 @@ export async function getActivePauses(on: string): Promise<CustomerPause[]> {
   }))
 }
 
-export type Product = {
-  id: string
-  name: string
-  unit: string
-  listPriceCop: number
+/** Todos los pedidos habituales de una vez, para la pantalla de fijos. */
+export async function getAllStandingItems(): Promise<
+  Map<string, Map<string, number>>
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('standing_order_items')
+    .select('customer_id, product_id, quantity')
+
+  if (error) throw new Error(`No pude cargar los pedidos fijos: ${error.message}`)
+
+  const byCustomer = new Map<string, Map<string, number>>()
+  for (const row of data ?? []) {
+    const forCustomer = byCustomer.get(row.customer_id) ?? new Map()
+    forCustomer.set(row.product_id, Number(row.quantity))
+    byCustomer.set(row.customer_id, forCustomer)
+  }
+  return byCustomer
 }
 
 export async function listProducts(): Promise<Product[]> {
@@ -115,8 +130,6 @@ export async function listProducts(): Promise<Product[]> {
     listPriceCop: p.list_price_cop,
   }))
 }
-
-export type Seller = { id: string; fullName: string }
 
 export async function listSellers(): Promise<Seller[]> {
   const supabase = await createClient()

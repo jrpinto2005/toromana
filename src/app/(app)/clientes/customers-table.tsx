@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { Customer, Seller } from '@/modules/clients'
 import { assignSellerAction, type ActionState } from './actions'
+import { EditCustomerDialog } from './edit-customer-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -169,6 +170,7 @@ export function CustomersTable({
               <TableHead>Teléfono</TableHead>
               <TableHead>Vendedor</TableHead>
               <TableHead>Frecuencia</TableHead>
+              <TableHead className="w-16" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -205,11 +207,14 @@ export function CustomersTable({
                   )}
                 </TableCell>
                 <TableCell>{RECURRENCE_LABEL[c.recurrence]}</TableCell>
+                <TableCell className="text-right">
+                  <EditCustomerDialog customer={c} sellers={sellers} />
+                </TableCell>
               </TableRow>
             ))}
             {visible.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   Ningún cliente coincide con la búsqueda.
                 </TableCell>
               </TableRow>

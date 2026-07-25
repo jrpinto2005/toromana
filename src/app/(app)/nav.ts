@@ -25,6 +25,11 @@ export const NAV: NavItem[] = [
     roles: ['admin', 'contabilidad', 'produccion'],
   },
   {
+    href: '/fijos',
+    label: 'Fijos',
+    roles: ['admin', 'contabilidad', 'produccion'],
+  },
+  {
     href: '/cartera',
     label: 'Cartera',
     roles: ['admin', 'contabilidad', 'produccion'],

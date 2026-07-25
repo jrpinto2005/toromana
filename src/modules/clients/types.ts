@@ -84,3 +84,12 @@ export function toCustomer(row: CustomerRow): Customer {
     active: row.active,
   }
 }
+
+export type Product = {
+  id: string
+  name: string
+  unit: string
+  listPriceCop: number
+}
+
+export type Seller = { id: string; fullName: string }

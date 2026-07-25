@@ -131,6 +131,8 @@ export async function createRun(
   if (itemRows.length > 0) {
     const { error } = await supabase.from('order_items').insert(itemRows)
     if (error) throw new Error(`No pude cargar los productos: ${error.message}`)
+
+    for (const order of createdOrders ?? []) await recalcOrderTotal(order.id)
   }
 
   return { run, generated: createdOrders?.length ?? 0, skippedByPause }
@@ -194,6 +196,27 @@ export async function addCustomerToRun(
         0,
     })),
   )
+
+  await recalcOrderTotal(order.id)
+}
+
+/**
+ * Recalcula el total de una orden desde sus líneas.
+ *
+ * Lo que se congela al confirmar es el PRECIO de cada línea, que ya queda
+ * guardado en `unit_price_cop`. El total no necesita congelarse: derivarlo
+ * siempre es lo que permite seguir corrigiendo un pedido después de
+ * confirmado sin que la cartera quede mintiendo.
+ */
+async function recalcOrderTotal(orderId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('order_items')
+    .select('subtotal_cop')
+    .eq('order_id', orderId)
+
+  const total = (data ?? []).reduce((sum, i) => sum + (i.subtotal_cop ?? 0), 0)
+  await supabase.from('orders').update({ total_cop: total }).eq('id', orderId)
 }
 
 export async function removeOrder(orderId: string): Promise<void> {
@@ -217,6 +240,7 @@ export async function setOrderItem(
       .eq('order_id', orderId)
       .eq('product_id', productId)
     if (error) throw new Error(`No pude quitar el producto: ${error.message}`)
+    await recalcOrderTotal(orderId)
     return
   }
 
@@ -231,33 +255,27 @@ export async function setOrderItem(
   )
 
   if (error) throw new Error(`No pude guardar la cantidad: ${error.message}`)
+  await recalcOrderTotal(orderId)
 }
 
 /**
- * Confirma el pedido: congela los totales.
+ * Confirma el pedido: a partir de aquí cuenta como cargo en la cartera.
  *
- * A partir de aquí las órdenes cuentan como cargo en la cartera del cliente, así
- * que el total deja de recalcularse desde las líneas. Cambiar un precio de lista
- * después no reescribe lo que ya se cobró.
+ * No lo cierra. Un pedido confirmado se sigue editando —en la práctica siempre
+ * aparece una corrección después de despachar— y cada cambio se refleja en la
+ * cartera del cliente al instante.
  */
 export async function confirmRun(runId: string): Promise<number> {
   const supabase = await createClient()
 
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('id, order_items(subtotal_cop)')
+    .select('id')
     .eq('run_id', runId)
 
   if (error) throw new Error(`No pude leer el pedido: ${error.message}`)
 
-  for (const row of orders ?? []) {
-    const r = row as unknown as {
-      id: string
-      order_items: { subtotal_cop: number }[]
-    }
-    const total = r.order_items.reduce((sum, i) => sum + (i.subtotal_cop ?? 0), 0)
-    await supabase.from('orders').update({ total_cop: total }).eq('id', r.id)
-  }
+  for (const order of orders ?? []) await recalcOrderTotal(order.id)
 
   const { error: runError } = await supabase
     .from('delivery_runs')
