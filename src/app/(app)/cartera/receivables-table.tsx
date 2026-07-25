@@ -23,6 +23,7 @@ import { PaymentForm } from "./payment-form";
 import { formatCop } from "@/lib/money";
 import { formatAge, formatShortDate } from "@/lib/dates";
 import {
+  bankDetailsFor,
   collectionMessage,
   OVERDUE_URGENCIES,
   whatsAppLink,
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   rows: Receivable[];
   bankDetails: string;
+  bankDetailsInstitutional: string;
   brandName: string;
   /** Vendedores presentes en la lista, para el filtro. */
   sellers: { id: string; name: string }[];
@@ -45,6 +47,7 @@ type Props = {
 export function ReceivablesTable({
   rows,
   bankDetails,
+  bankDetailsInstitutional,
   brandName,
   sellers,
   handlers,
@@ -140,7 +143,12 @@ export function ReceivablesTable({
                 balanceCop: row.balanceCop,
                 oldestUnpaidDate: row.oldestUnpaidDate,
                 daysOverdue: row.daysOverdue,
-                bankDetails,
+                // Cada cliente recibe la cuenta que le corresponde: la de la
+                // empresa si es institucional, la simple si es persona.
+                bankDetails: bankDetailsFor(row.isInstitutional, {
+                  bankDetails,
+                  bankDetailsInstitutional,
+                }),
                 brandName,
               });
               const link = whatsAppLink(row.phone, message);

@@ -64,6 +64,7 @@ export default async function CarteraPage() {
       <ReceivablesTable
         rows={rows}
         bankDetails={company.bankDetails}
+        bankDetailsInstitutional={company.bankDetailsInstitutional}
         brandName={company.brandName}
         sellers={sellers}
         handlers={handlers}

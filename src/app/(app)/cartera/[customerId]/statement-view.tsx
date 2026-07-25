@@ -23,7 +23,12 @@ import {
 } from "@/components/ui/table";
 import { formatCop } from "@/lib/money";
 import { formatAge, formatShortDate } from "@/lib/dates";
-import { collectionMessage, urgencyFor, whatsAppLink } from "@/modules/notifications";
+import {
+  bankDetailsFor,
+  collectionMessage,
+  urgencyFor,
+  whatsAppLink,
+} from "@/modules/notifications";
 import type { CustomerStatement } from "@/modules/payments/client";
 import { PaymentForm } from "../payment-form";
 import { UrgencyBadge } from "../urgency-badge";
@@ -34,6 +39,8 @@ type Props = {
   handlers: { id: string; fullName: string }[];
   currentUserId: string;
   bankDetails: string;
+  bankDetailsInstitutional: string;
+  isInstitutional: boolean;
   brandName: string;
 };
 
@@ -43,6 +50,8 @@ export function StatementView({
   handlers,
   currentUserId,
   bankDetails,
+  bankDetailsInstitutional,
+  isInstitutional,
   brandName,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);
@@ -55,7 +64,10 @@ export function StatementView({
       balanceCop: statement.balanceCop,
       oldestUnpaidDate: statement.oldestUnpaidDate,
       daysOverdue: statement.daysOverdue,
-      bankDetails,
+      bankDetails: bankDetailsFor(isInstitutional, {
+        bankDetails,
+        bankDetailsInstitutional,
+      }),
       brandName,
     }),
   );

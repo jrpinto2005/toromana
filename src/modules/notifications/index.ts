@@ -16,6 +16,7 @@ export {
 } from "./urgency";
 
 export {
+  bankDetailsFor,
   collectionMessage,
   deliveryReminderMessage,
   type CollectionContext,

@@ -27,7 +27,11 @@ export default async function CustomerStatementPage({
   // Se lee directo la fila del cliente en vez de pasar por `modules/clients`
   // porque aquí solo hacen falta tres campos y el módulo es de otro agente.
   const [{ data: customer }, statement, handlers, company] = await Promise.all([
-    supabase.from("customers").select("id, name, phone").eq("id", customerId).maybeSingle(),
+    supabase
+      .from("customers")
+      .select("id, name, phone, kind")
+      .eq("id", customerId)
+      .maybeSingle(),
     getCustomerStatement(customerId),
     listPaymentHandlers(),
     getCompanySettings(),
@@ -51,6 +55,8 @@ export default async function CustomerStatementPage({
         handlers={handlers}
         currentUserId={profile.id}
         bankDetails={company.bankDetails}
+        bankDetailsInstitutional={company.bankDetailsInstitutional}
+        isInstitutional={customer.kind === 'institucional'}
         brandName={company.brandName}
       />
     </div>

@@ -15,6 +15,7 @@ type Company = {
   brandName: string;
   contactBlock: string;
   bankDetails: string;
+  bankDetailsInstitutional: string;
 };
 
 export function CompanyPanel({ company }: { company: Company }) {
@@ -70,14 +71,32 @@ export function CompanyPanel({ company }: { company: Company }) {
           <Textarea id="contact-block" rows={2} {...field("contactBlock")} />
         </div>
 
+        {/* Dos cuentas, porque el cobro no es el mismo. Un hotel gira contra
+            factura a la cuenta de la empresa; una clienta transfiere a la
+            cuenta simple. Mandar la equivocada termina en un pago mal aplicado
+            y una llamada de contabilidad. El mensaje de WhatsApp escoge la que
+            corresponde según el tipo de cliente. */}
         <div className="space-y-1.5">
-          <Label htmlFor="bank-details">Datos bancarios</Label>
+          <Label htmlFor="bank-details">Cuenta para clientes personas</Label>
           <Textarea
             id="bank-details"
             rows={2}
             {...field("bankDetails")}
-            placeholder="Banco, tipo de cuenta, número — se cita en los mensajes de cobro"
+            placeholder="Banco, tipo de cuenta, número — va en el cobro por WhatsApp"
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="bank-details-inst">Cuenta para institucionales</Label>
+          <Textarea
+            id="bank-details-inst"
+            rows={2}
+            {...field("bankDetailsInstitutional")}
+            placeholder="La cuenta de la empresa, con razón social y NIT"
+          />
+          <p className="text-xs text-muted-foreground">
+            Si se deja vacía se usa la de personas.
+          </p>
         </div>
 
         <Button onClick={save} disabled={pending}>

@@ -15,6 +15,8 @@ export type Receivable = {
   customerId: string;
   customerName: string;
   phone: string | null;
+  /** Decide a qué cuenta bancaria se le pide que pague. */
+  isInstitutional: boolean;
   sellerId: string | null;
   sellerName: string | null;
   chargedCop: number;

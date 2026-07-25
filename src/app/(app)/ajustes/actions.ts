@@ -76,6 +76,7 @@ export async function updateCompanySettings(input: {
   brandName: string;
   contactBlock: string;
   bankDetails: string;
+  bankDetailsInstitutional: string;
 }): Promise<ActionResult> {
   const guard = await requireAdmin();
   if (guard) return guard;
@@ -89,6 +90,7 @@ export async function updateCompanySettings(input: {
       brand_name: input.brandName,
       contact_block: input.contactBlock,
       bank_details: input.bankDetails,
+      bank_details_institutional: input.bankDetailsInstitutional,
     })
     .eq("id", true);
 

@@ -20,6 +20,23 @@ export type CollectionContext = {
   brandName?: string | null;
 };
 
+/**
+ * A qué cuenta se le pide que pague.
+ *
+ * Un hotel gira contra factura a la cuenta de la empresa; una clienta del
+ * barrio transfiere a la cuenta simple. Mandarle a un institucional los datos
+ * equivocados termina en un pago mal aplicado y una llamada de contabilidad.
+ */
+export function bankDetailsFor(
+  isInstitutional: boolean,
+  company: { bankDetails: string; bankDetailsInstitutional: string },
+): string {
+  const chosen = isInstitutional
+    ? company.bankDetailsInstitutional
+    : company.bankDetails
+  return chosen?.trim() ? chosen : company.bankDetails
+}
+
 /** Primer nombre, para que el saludo no suene a carta de cobranza jurídica. */
 function greetingName(fullName: string): string {
   const first = fullName.trim().split(/\s+/)[0] ?? "";
@@ -40,7 +57,7 @@ export function collectionMessage(ctx: CollectionContext): string {
   const amount = formatCop(ctx.balanceCop);
 
   const since = ctx.oldestUnpaidDate
-    ? ` correspondiente a entregas desde el ${formatLongDate(ctx.oldestUnpaidDate)}`
+    ? ` ${formatLongDate(ctx.oldestUnpaidDate)}`
     : "";
 
   const lines: string[] = [];

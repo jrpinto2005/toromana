@@ -44,7 +44,9 @@ export async function listReceivables(opts?: {
 
   let customerQuery = supabase
     .from("customers")
-    .select("id, name, phone, seller_id, seller:profiles!customers_seller_id_fkey(id, full_name)")
+    .select(
+      "id, name, phone, kind, seller_id, seller:profiles!customers_seller_id_fkey(id, full_name)",
+    )
     .eq("active", true);
   if (opts?.sellerId) customerQuery = customerQuery.eq("seller_id", opts.sellerId);
 
@@ -70,6 +72,7 @@ export async function listReceivables(opts?: {
         customerId: customer.id,
         customerName: customer.name,
         phone: customer.phone,
+        isInstitutional: customer.kind === "institucional",
         sellerId: customer.seller_id,
         sellerName: seller?.full_name ?? null,
         chargedCop: debt.charged_cop ?? 0,
@@ -262,12 +265,16 @@ export async function getCompanySettings(): Promise<{
   taxId: string;
   contactBlock: string;
   bankDetails: string;
+  /** Cuenta para institucionales: giran contra factura, a otra cuenta. */
+  bankDetailsInstitutional: string;
 }> {
   const supabase = await createClient();
 
   const { data } = await supabase
     .from("company_settings")
-    .select("brand_name, legal_name, tax_id, contact_block, bank_details")
+    .select(
+      "brand_name, legal_name, tax_id, contact_block, bank_details, bank_details_institutional",
+    )
     .maybeSingle();
 
   return {
@@ -276,6 +283,8 @@ export async function getCompanySettings(): Promise<{
     taxId: data?.tax_id ?? "",
     contactBlock: data?.contact_block ?? "",
     bankDetails: data?.bank_details ?? "",
+    bankDetailsInstitutional:
+      data?.bank_details_institutional || data?.bank_details || "",
   };
 }
 
