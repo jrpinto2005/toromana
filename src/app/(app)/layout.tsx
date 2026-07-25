@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getProfile } from '@/lib/auth'
+import { countOpenPosts } from '@/modules/forum'
 import { logout } from '../(auth)/login/actions'
 import { Button } from '@/components/ui/button'
+import { Brand } from '@/components/brand'
 import { navFor } from './nav'
 import { NavLinks } from './nav-links'
 
@@ -24,15 +26,19 @@ export default async function AppLayout({
   // el usuario existe en Auth pero nadie le creó su fila en `profiles`.
   if (!profile) redirect('/login')
 
+  // Pendientes y quejas sin resolver, en la pestaña del foro. Es la única
+  // cifra que el equipo necesita ver sin entrar a buscarla.
+  const openPosts = profile.role === 'reparto' ? 0 : await countOpenPosts()
+
   return (
     <div className="min-h-dvh bg-muted/20">
       <header className="border-b bg-background">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            Toromana
+          <Link href="/" className="transition-opacity hover:opacity-80">
+            <Brand />
           </Link>
 
-          <NavLinks items={navFor(profile.role)} />
+          <NavLinks items={navFor(profile.role)} badges={{ '/foro': openPosts }} />
 
           <div className="ml-auto flex items-center gap-3">
             <div className="text-right leading-tight">

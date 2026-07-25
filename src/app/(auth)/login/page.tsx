@@ -5,6 +5,7 @@ import { login, type LoginState } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Brand } from '@/components/brand'
 
 const initialState: LoginState = { error: null }
 
@@ -12,15 +13,16 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initialState)
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
+    <main className="flex min-h-dvh items-center justify-center bg-[#faf2e1] p-4 dark:bg-[#12120f]">
       <form
         action={formAction}
         className="w-full max-w-sm space-y-6 rounded-xl border bg-background p-8 shadow-sm"
       >
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Toromana</h1>
+        <div className="space-y-2">
+          <Brand size="lg" />
           <p className="text-sm text-muted-foreground">
-            Entra con tu usuario o tu correo.
+            Pedidos, reparto y cartera del galpón. Entra con tu usuario o tu
+            correo.
           </p>
         </div>
 
