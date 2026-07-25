@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
-import { getActiveRun, getRouteStops } from '@/modules/documents'
+import { getActiveRun, getRun, getRouteStops } from '@/modules/documents'
 import { listProducts } from '@/modules/clients'
 import { formatQuantity } from '@/lib/money'
 import { formatWeekdayDate } from '@/lib/dates'
@@ -17,11 +17,16 @@ export const dynamic = 'force-dynamic'
  * leyendo cuatro vacías; en papel, cada columna de más es una oportunidad de
  * equivocarse de fila.
  */
-export default async function PrintRoutePage() {
+export default async function PrintRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ run?: string }>
+}) {
   const profile = await getProfile()
   if (!profile) redirect('/login')
 
-  const run = await getActiveRun()
+  const { run: requested } = await searchParams
+  const run = requested ? await getRun(requested) : await getActiveRun()
   if (!run) notFound()
 
   const [stops, allProducts] = await Promise.all([

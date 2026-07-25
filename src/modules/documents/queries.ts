@@ -23,13 +23,24 @@ function one<T>(value: T | T[] | null): T | null {
  * entregar), y si no hay ninguno pendiente, el último ya entregado —útil para
  * revisar qué pasó sin tener que ir a buscar el run por id.
  */
+/**
+ * El reparto de hoy: el confirmado más cercano a la fecha actual.
+ *
+ * Primero busca hacia adelante —la próxima entrega es lo que le importa a
+ * quien reparte— y si no hay ninguna pendiente cae al último despachado.
+ *
+ * Ordenar por fecha ascendente sin filtrar por hoy devolvía siempre el pedido
+ * más viejo de la historia, y la ruta quedaba clavada en él.
+ */
 export async function getActiveRun(): Promise<DeliveryRunSummary | null> {
   const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
 
   const { data: upcoming } = await supabase
     .from("delivery_runs")
     .select("id, delivery_date, status")
-    .eq("status", "confirmado")
+    .in("status", ["confirmado", "entregado"])
+    .gte("delivery_date", today)
     .order("delivery_date", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -41,12 +52,30 @@ export async function getActiveRun(): Promise<DeliveryRunSummary | null> {
   const { data: last } = await supabase
     .from("delivery_runs")
     .select("id, delivery_date, status")
-    .eq("status", "entregado")
+    .in("status", ["confirmado", "entregado", "cerrado"])
+    .lt("delivery_date", today)
     .order("delivery_date", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   return last ? { id: last.id, deliveryDate: last.delivery_date, status: last.status } : null;
+}
+
+/** Semanas despachables, para poder mirar una ruta que no sea la de hoy. */
+export async function listDeliverableRuns(): Promise<DeliveryRunSummary[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("delivery_runs")
+    .select("id, delivery_date, status")
+    .in("status", ["confirmado", "entregado", "cerrado"])
+    .order("delivery_date", { ascending: false })
+    .limit(20);
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    deliveryDate: r.delivery_date,
+    status: r.status,
+  }));
 }
 
 export async function getRun(runId: string): Promise<DeliveryRunSummary | null> {

@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { Printer } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { getActiveRun, getRouteStops } from "@/modules/documents";
+import { getActiveRun, getRun, getRouteStops, listDeliverableRuns } from "@/modules/documents";
+import { RunPicker } from "./run-picker";
 import { formatCop } from "@/lib/money";
 import { formatWeekdayDate } from "@/lib/dates";
 import { RouteList } from "./route-list";
@@ -12,11 +13,21 @@ import { CsvButton } from "./csv-button";
 export const metadata = { title: "Ruta · Toromana" };
 export const dynamic = "force-dynamic";
 
-export default async function RutaPage() {
+export default async function RutaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ run?: string }>;
+}) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
 
-  const run = await getActiveRun();
+  // Por defecto la entrega de hoy, pero se puede mirar otra semana: pasa que
+  // hay que revisar qué llevaba una ruta anterior.
+  const { run: requested } = await searchParams;
+  const [run, runs] = await Promise.all([
+    requested ? getRun(requested) : getActiveRun(),
+    listDeliverableRuns(),
+  ]);
 
   if (!run) {
     return (
@@ -41,6 +52,7 @@ export default async function RutaPage() {
           <p className="text-sm text-muted-foreground">
             {deliveredCount}/{stops.length} entregados · {formatCop(totalCop)} en ruta
           </p>
+          {runs.length > 1 && <RunPicker runs={runs} current={run.id} />}
         </div>
 
         <div className="flex gap-2">
