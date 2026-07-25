@@ -26,8 +26,11 @@ Antes de cada push: `git status` no debe mostrar nada de `example info/` ni de `
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript · Supabase (Postgres + Auth + Realtime) ·
-Tailwind + shadcn/ui · `@react-pdf/renderer` · `xlsx` (SheetJS) · deploy en Vercel.
+Next.js 16 (App Router) · React 19 · TypeScript · Supabase (Postgres + Auth + Realtime) ·
+Tailwind v4 + shadcn/ui (Base UI) · Recharts · deploy en Vercel.
+
+Sin librería de PDF: los documentos imprimibles son rutas HTML con `@media print`.
+Sin SheetJS: la importación del Excel es un script de Python que corre una sola vez.
 
 ## Comandos
 
