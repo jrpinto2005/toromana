@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Check, MapPin, Phone, Receipt, Undo2 } from "lucide-react";
@@ -23,19 +23,51 @@ import { cn } from "@/lib/utils";
 
 export function RouteList({ stops }: { stops: RouteStop[] }) {
   const [cashFor, setCashFor] = useState<RouteStop | null>(null);
+  const [search, setSearch] = useState("");
 
-  const pending = stops.filter((s) => s.status !== "entregado");
-  const done = stops.filter((s) => s.status === "entregado");
+  // Con treinta y pico de entregas, encontrar a alguien en el celular
+  // desplazando la lista con una mano y una cubeta en la otra no es viable.
+  // La búsqueda cubre nombre y dirección: quien reparte a veces recuerda el
+  // edificio y no el nombre.
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return stops;
+    return stops.filter(
+      (s) =>
+        s.customerName.toLowerCase().includes(q) ||
+        (s.address ?? "").toLowerCase().includes(q),
+    );
+  }, [stops, search]);
+
+  const pending = visible.filter((s) => s.status !== "entregado");
+  const done = visible.filter((s) => s.status === "entregado");
 
   return (
     <div className="space-y-6">
+      <div className="sticky top-0 z-10 -mx-1 bg-background/95 px-1 py-2 backdrop-blur">
+        <Input
+          type="search"
+          inputMode="search"
+          placeholder="Buscar cliente o dirección…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-11 text-base"
+        />
+        {search && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {visible.length} de {stops.length} entregas
+            {visible.length === 0 && " · nadie coincide"}
+          </p>
+        )}
+      </div>
+
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">
           Por entregar ({pending.length})
         </h2>
         {pending.length === 0 && (
           <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            Ya entregaste todo lo de hoy.
+            {search ? "Nadie pendiente con esa búsqueda." : "Ya entregaste todo lo de hoy."}
           </p>
         )}
         <div className="space-y-3">
