@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Area,
   CartesianGrid,
@@ -15,11 +16,18 @@ import type { WeekProjection } from '@/modules/production/client'
 import { formatShortDate, type IsoDate } from '@/lib/dates'
 
 /**
- * Producción proyectada, apilada por lote.
+ * Producción proyectada, en dos vistas que responden preguntas distintas.
  *
- * Apilar no es decorativo: la pregunta del negocio no es solo "cuánto voy a
- * producir" sino "de quién viene". Al ver la franja del lote viejo adelgazarse
- * hasta desaparecer, la caída deja de ser un misterio y se vuelve una fecha.
+ * **Apiladas** responde "¿alcanza el total?". Sirve para eso y solo para eso:
+ * en una pila, el borde superior de cada franja va arrastrado por la suma de
+ * las de abajo, así que todas parecen subir y bajar juntas aunque cada lote
+ * siga su propio ciclo. Lo único que codifica el valor de un lote es el grosor
+ * de su franja, y el ojo lo lee mal.
+ *
+ * **Por lote** responde "¿por qué?". Sin apilar, cada línea es la curva de ese
+ * lote y nada más: se ve dónde está su pico, dónde su muda, y —lo que importa
+ * para decidir— si el valle de uno cae sobre el pico de otro. Esa es la vista
+ * donde el escalonamiento se puede juzgar.
  */
 
 // Paleta categórica en orden fijo. El orden es el mecanismo de seguridad para
@@ -48,8 +56,13 @@ export function ProjectionChart({
   targetFor,
   weekDate,
 }: Props) {
-  // Los lotes se apilan en el orden en que aparecen: los que ya están abajo,
-  // los propuestos arriba, así la capa nueva se lee como lo que se agrega.
+  // Apilado responde "¿alcanza el total?"; por lote responde "¿por qué?".
+  // Hacen falta los dos: en el apilado el borde de cada franja arrastra la suma
+  // de las de abajo, así que ahí no se puede leer la curva de un lote.
+  const [mode, setMode] = useState<'apiladas' | 'individuales'>('apiladas')
+
+  // El orden de las series es fijo: cada lote conserva su color en los dos
+  // modos. El color identifica al lote, no a su posición en la pila.
   const lotIds = [...new Set(projection.flatMap((w) => Object.keys(w.byLot)))]
   const existing = lotIds.filter((id) => !proposedIds.has(id))
   const proposed = lotIds.filter((id) => proposedIds.has(id))
@@ -61,7 +74,11 @@ export function ProjectionChart({
     meta: targetFor(week.week),
     sinComprar: baseline[index]?.total ?? 0,
     total: week.total,
-    ...Object.fromEntries(ordered.map((id) => [id, week.byLot[id] ?? 0])),
+    // `null` y no 0 cuando el lote no está: en modo línea, un cero dibuja una
+    // caída al piso que parece producción perdida en vez de un lote que salió.
+    ...Object.fromEntries(
+      ordered.map((id) => [id, week.byLot[id] ?? (mode === 'apiladas' ? 0 : null)]),
+    ),
   }))
 
   return (
@@ -104,12 +121,50 @@ export function ProjectionChart({
         }
       `}</style>
 
-      <div className="mb-3">
-        <h2 className="font-semibold">Producción proyectada · 52 semanas</h2>
-        <p className="text-sm text-muted-foreground">
-          Cada franja es un lote. La línea punteada es la meta.
-        </p>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">
+            Producción proyectada · {projection.length} semanas
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {mode === 'apiladas'
+              ? 'Cada franja es un lote y se suman. La línea punteada es la meta.'
+              : 'Cada línea es un lote por separado, para comparar en qué momento de su ciclo va cada uno.'}
+          </p>
+        </div>
+
+        <div className="flex gap-1">
+          {(
+            [
+              ['apiladas', 'Apiladas'],
+              ['individuales', 'Por lote'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setMode(value)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                mode === value
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {mode === 'individuales' && (
+        <p className="mb-3 rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Sin apilar y sin la meta: a esta escala un solo lote llega a unos mil
+          huevos y la meta está sobre dos mil, así que dibujarla aplastaría las
+          curvas. Lo que se busca aquí es otra cosa — ver si el valle de muda de
+          un lote coincide con el pico de otro, que es de lo que depende que la
+          suma quede plana.
+        </p>
+      )}
 
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -159,37 +214,58 @@ export function ProjectionChart({
               formatter={(value: string) => lotNames.get(value) ?? value}
             />
 
-            {ordered.map((id, index) => {
-              const isProposed = proposedIds.has(id)
-              const color = seriesVar(index)
-              return (
-                <Area
+            {mode === 'apiladas' &&
+              ordered.map((id, index) => {
+                const isProposed = proposedIds.has(id)
+                const color = seriesVar(index)
+                return (
+                  <Area
+                    key={id}
+                    type="monotone"
+                    dataKey={id}
+                    name={id}
+                    stackId="produccion"
+                    fill={isProposed ? `url(#hatch-${id})` : color}
+                    fillOpacity={isProposed ? 1 : 0.85}
+                    // 2px del color de la superficie: separa las capas sin
+                    // agregar una línea que compita con los datos.
+                    stroke="var(--surface-1)"
+                    strokeWidth={2}
+                    isAnimationActive={false}
+                  />
+                )
+              })}
+
+            {mode === 'individuales' &&
+              ordered.map((id, index) => (
+                <Line
                   key={id}
                   type="monotone"
                   dataKey={id}
                   name={id}
-                  stackId="produccion"
-                  fill={isProposed ? `url(#hatch-${id})` : color}
-                  fillOpacity={isProposed ? 1 : 0.85}
-                  // 2px del color de la superficie: separa las capas sin
-                  // agregar una línea que compita con los datos.
-                  stroke="var(--surface-1)"
+                  stroke={seriesVar(index)}
                   strokeWidth={2}
+                  // Los propuestos van punteados: es la misma distinción que
+                  // en el apilado, donde van rayados.
+                  strokeDasharray={proposedIds.has(id) ? '5 4' : undefined}
+                  dot={false}
                   isAnimationActive={false}
+                  connectNulls={false}
                 />
-              )
-            })}
+              ))}
 
-            <Line
-              type="stepAfter"
-              dataKey="meta"
-              name="Meta"
-              stroke="var(--text-secondary)"
-              strokeWidth={2}
-              strokeDasharray="6 4"
-              dot={false}
-              isAnimationActive={false}
-            />
+            {mode === 'apiladas' && (
+              <Line
+                type="stepAfter"
+                dataKey="meta"
+                name="Meta"
+                stroke="var(--text-secondary)"
+                strokeWidth={2}
+                strokeDasharray="6 4"
+                dot={false}
+                isAnimationActive={false}
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -260,7 +336,9 @@ function ProjectionTooltip({
   if (!active || !payload?.length) return null
 
   const meta = payload.find((p) => p.dataKey === 'meta')?.value ?? 0
-  const lots = payload.filter((p) => p.dataKey !== 'meta' && p.value > 0)
+  const lots = payload.filter(
+    (p) => p.dataKey !== 'meta' && typeof p.value === 'number' && p.value > 0,
+  )
   const total = lots.reduce((sum, p) => sum + p.value, 0)
 
   return (
