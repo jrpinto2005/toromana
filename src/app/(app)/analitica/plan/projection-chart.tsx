@@ -94,6 +94,7 @@ export function ProjectionChart({
           --series-4: #eda100;
           --series-5: #e87ba4;
           --series-6: #008300;
+          --target: #e34948;
         }
         @media (prefers-color-scheme: dark) {
           :root:where(:not([data-theme="light"])) .viz-root {
@@ -106,6 +107,7 @@ export function ProjectionChart({
             --series-4: #c98500;
             --series-5: #d55181;
             --series-6: #008300;
+            --target: #e66767;
           }
         }
         :root[data-theme="dark"] .viz-root {
@@ -118,6 +120,7 @@ export function ProjectionChart({
           --series-4: #c98500;
           --series-5: #d55181;
           --series-6: #008300;
+          --target: #e66767;
         }
       `}</style>
 
@@ -254,14 +257,36 @@ export function ProjectionChart({
                 />
               ))}
 
+            {/* La meta va en dos trazos: primero un halo del color de la
+                superficie, que le abre un canal entre las franjas y la deja
+                legible por encima de cualquier color; encima el trazo rojo.
+                Sin el halo, la línea se pierde justo donde más importa mirarla,
+                que es cuando la producción la está cruzando.
+
+                El rojo queda a ΔE 7.2 del verde del sexto lote para visión
+                protán — dentro de la banda que exige codificación secundaria.
+                La tiene, y no es sutil: la meta es una LÍNEA punteada con halo
+                y los lotes son áreas rellenas. Se distinguen por forma antes
+                que por color. */}
+            {mode === 'apiladas' && (
+              <Line
+                type="stepAfter"
+                dataKey="meta"
+                stroke="var(--surface-1)"
+                strokeWidth={3}
+                dot={false}
+                legendType="none"
+                isAnimationActive={false}
+              />
+            )}
             {mode === 'apiladas' && (
               <Line
                 type="stepAfter"
                 dataKey="meta"
                 name="Meta"
-                stroke="var(--text-secondary)"
-                strokeWidth={2}
-                strokeDasharray="6 4"
+                stroke="var(--target)"
+                strokeWidth={1}
+                strokeDasharray="9 5"
                 dot={false}
                 isAnimationActive={false}
               />
@@ -348,7 +373,12 @@ function ProjectionTooltip({
         <span className="text-lg font-semibold tabular-nums">
           {total.toLocaleString('es-CO')}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span
+            aria-hidden
+            className="inline-block h-[3px] w-4 rounded-full"
+            style={{ background: 'var(--target)' }}
+          />
           meta {meta.toLocaleString('es-CO')}
         </span>
       </div>
