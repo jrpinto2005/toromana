@@ -10,7 +10,7 @@ type CustomerRef = {
   nit?: string | null;
   po_note?: string | null;
 };
-type ProductRef = { name: string; unit: string };
+type ProductRef = { name: string; unit: string; receipt_description?: string | null };
 
 /** Supabase entrega relaciones anidadas como objeto o arreglo según el join. */
 function one<T>(value: T | T[] | null): T | null {
@@ -119,7 +119,7 @@ export async function getReceipt(orderId: string): Promise<Receipt | null> {
     .select(
       `id, total_cop, run:delivery_runs(delivery_date),
        customer:customers(name, address, legal_name, nit, po_note),
-       order_items(quantity, unit_price_cop, subtotal_cop, products(name, unit))`,
+       order_items(quantity, unit_price_cop, subtotal_cop, products(name, unit, receipt_description))`,
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -159,6 +159,8 @@ export async function getReceipt(orderId: string): Promise<Receipt | null> {
       const product = one(item.products);
       return {
         productName: product?.name ?? "Producto",
+        receiptDescription:
+          product?.receipt_description ?? product?.name ?? "Producto",
         unit: product?.unit ?? "",
         quantity: Number(item.quantity),
         unitPriceCop: item.unit_price_cop,

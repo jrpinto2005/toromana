@@ -32,6 +32,8 @@ export type RouteStop = {
 
 export type ReceiptItem = {
   productName: string;
+  /** Redacción pactada que va impresa; cae al nombre corto si no se definió. */
+  receiptDescription: string;
   unit: string;
   quantity: number;
   unitPriceCop: number;
