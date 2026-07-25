@@ -18,3 +18,28 @@ export type {
   RecordEggProductionInput,
   RecordLotEventInput,
 } from "./types";
+
+// La curva y el planificador son funciones puras: sirven igual en el navegador,
+// y tenerlas ahí permite recalcular un escenario sin ir al servidor.
+export {
+  layingRate,
+  smallEggShare,
+  PRIOR,
+  WEEKS_TO_LAY,
+  PRODUCTIVE_WEEKS,
+  type CurveParams,
+  type Fit,
+} from "./curve";
+
+export {
+  project,
+  plan,
+  targetAt,
+  MIN_LOT,
+  LOT_STEP,
+  type PlannedLot,
+  type WeekProjection,
+  type Purchase,
+  type Plan,
+  type Target,
+} from "./planner";

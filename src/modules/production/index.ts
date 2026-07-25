@@ -19,3 +19,36 @@ export type {
 
 export { listHenLots, getHenLot, listLotEvents, listEggProduction } from "./queries";
 export { createHenLot, retireHenLot, recordLotEvent, recordEggProduction } from "./actions";
+
+// ── Planeación de producción ──
+export {
+  layingRate,
+  smallEggShare,
+  fitCurve,
+  PRIOR,
+  WEEKS_TO_LAY,
+  PRODUCTIVE_WEEKS,
+  type CurveParams,
+  type Fit,
+  type Observation,
+} from "./curve";
+
+export {
+  project,
+  plan,
+  targetAt,
+  MIN_LOT,
+  LOT_STEP,
+  type PlannedLot,
+  type WeekProjection,
+  type Purchase,
+  type Plan,
+  type Target,
+} from "./planner";
+
+export {
+  getPlanningInputs,
+  getWeeklyDemandEggs,
+  type PlanningInputs,
+  type LotHistory,
+} from "./planning-queries";

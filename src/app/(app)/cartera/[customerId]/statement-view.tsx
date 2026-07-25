@@ -62,7 +62,18 @@ export function StatementView({
 
   // El saldo corriente se arma recorriendo los movimientos. Los pagos pendientes
   // no lo mueven, igual que en la vista de la base.
-  let running = 0;
+  //
+  // Se calcula ANTES de renderizar, no acumulando dentro del map: mutar una
+  // variable durante el render funciona por accidente hoy, pero en cuanto React
+  // memoiza las filas el acumulado empieza a dar cifras equivocadas. En la
+  // pantalla de saldos eso no es un detalle.
+  const runningBalances = statement.entries.reduce<number[]>((acc, entry) => {
+    const previous = acc.length > 0 ? acc[acc.length - 1] : 0;
+    if (entry.kind === "cargo") acc.push(previous + entry.amountCop);
+    else if (!entry.pending) acc.push(previous - entry.amountCop);
+    else acc.push(previous);
+    return acc;
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -155,9 +166,6 @@ export function StatementView({
               )}
 
               {statement.entries.map((entry, index) => {
-                if (entry.kind === "cargo") running += entry.amountCop;
-                else if (!entry.pending) running -= entry.amountCop;
-
                 return (
                   <TableRow
                     key={`${entry.kind}-${entry.date}-${index}`}
@@ -179,7 +187,7 @@ export function StatementView({
                       {entry.kind === "abono" ? formatCop(entry.amountCop) : ""}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
-                      {entry.pending ? "—" : formatCop(running)}
+                      {entry.pending ? "—" : formatCop(runningBalances[index])}
                     </TableCell>
                   </TableRow>
                 );

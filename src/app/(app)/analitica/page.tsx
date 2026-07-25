@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { formatShortDate } from "@/lib/dates";
 import { LayingRateChart } from "./laying-rate-chart";
+import { AnalyticsTabs } from "./tabs";
 
 export const metadata = { title: "Analítica · Toromana" };
 export const dynamic = "force-dynamic";
@@ -42,6 +43,8 @@ export default async function AnaliticaPage() {
 
   return (
     <div className="space-y-6">
+      <AnalyticsTabs active="produccion" />
+
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Analítica</h1>
         <p className="text-sm text-muted-foreground">

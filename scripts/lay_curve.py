@@ -26,7 +26,7 @@ import math
 # Gallinas que entran ya casi en edad de postura: arrancan a las pocas semanas.
 ONSET_WEEKS = 5.0      # cuándo empieza a levantar la curva
 RAMP = 1.7             # qué tan rápida es la subida
-PEAK_RATE = 0.93       # huevos por gallina por día en el pico
+PEAK_RATE = 0.72       # huevos por gallina por día en el pico (gallina campesina)
 PLATEAU_WEEKS = 28.0   # hasta cuándo se sostiene el pico
 DECLINE = 0.0042       # caída semanal después de la meseta
 SMALL_EGG_DECAY = 5.0  # qué tan rápido deja de poner huevo pequeño

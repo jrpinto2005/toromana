@@ -271,15 +271,51 @@ def seed() -> None:
     save()
     print(f"  {len(inserted)} pagos")
 
+    _seed_lots(created, save)
+
+    # ── Foro ──────────────────────────────────────────────────
+    notes = [
+        ("queja", "Llegaron 2 cubetas con huevo partido. Reponer la próxima semana."),
+        ("pendiente", "Confirmar si siguen pausados en diciembre."),
+        ("idea", "Ofrecer media cubeta a los clientes que dicen que 30 les sobra."),
+        ("nota", "Pidió que timbren en portería, no al apartamento."),
+        ("pendiente", "Cobrar antes de fin de mes, lleva tres semanas."),
+    ]
+    posts = []
+    for kind, body in notes:
+        posts.append(
+            {
+                "author_id": random.choice(sellers)["id"],
+                "kind": kind,
+                "body": body,
+                "run_id": random.choice(created["delivery_runs"]),
+                "customer_id": random.choice(fijos)["id"] if random.random() < 0.7 else None,
+                "resolved_at": None,
+            }
+        )
+    inserted = call("POST", "forum_posts", posts, prefer="return=representation")
+    created["forum_posts"] = [p["id"] for p in inserted]
+    save()
+    print(f"  {len(inserted)} notas en el foro")
+
+    save()
+    print(f"\nListo. Registro de lo sembrado en {LEDGER}")
+
+
+def _seed_lots(created: dict, save) -> None:
+    """Los cuatro lotes y su historia semanal de producción."""
     # ── Lotes de gallinas ─────────────────────────────────────
     # Cuatro lotes en momentos distintos del ciclo. Esto es lo que hace que la
     # curva de producción total NO sea plana, que es justo el problema a resolver.
     print("Sembrando lotes y producción…")
+    # ~700 gallinas en total, repartidas en cuatro momentos del ciclo. Es lo que
+    # hace que la producción semanal oscile entre 2.100 y 3.000 huevos sin que
+    # nadie haya cambiado nada: simplemente los lotes envejecen a destiempo.
     lots_spec = [
-        ("L-2025-A", 120, 62, "Lohmann Brown"),   # en declive, cerca de salir
-        ("L-2025-B", 140, 34, "Lohmann Brown"),   # saliendo del pico
-        ("L-2026-A", 130, 14, "Isa Brown"),       # en pico
-        ("L-2026-B", 150, 3, "Isa Brown"),        # todavía sin poner
+        ("L-2025-A", 180, 64, "Lohmann Brown"),   # en declive, ya debió salir
+        ("L-2025-B", 150, 40, "Lohmann Brown"),   # saliendo del pico
+        ("L-2026-A", 170, 16, "Isa Brown"),       # en pico
+        ("L-2026-B", 200, 3, "Isa Brown"),        # todavía sin poner
     ]
 
     today = date.today()
@@ -351,33 +387,29 @@ def seed() -> None:
             call("POST", "egg_production", production, prefer="return=minimal")
         print(f"  {code}: {age_weeks} semanas, {len(production)} registros")
 
-    # ── Foro ──────────────────────────────────────────────────
-    notes = [
-        ("queja", "Llegaron 2 cubetas con huevo partido. Reponer la próxima semana."),
-        ("pendiente", "Confirmar si siguen pausados en diciembre."),
-        ("idea", "Ofrecer media cubeta a los clientes que dicen que 30 les sobra."),
-        ("nota", "Pidió que timbren en portería, no al apartamento."),
-        ("pendiente", "Cobrar antes de fin de mes, lleva tres semanas."),
-    ]
-    posts = []
-    for kind, body in notes:
-        posts.append(
-            {
-                "author_id": random.choice(sellers)["id"],
-                "kind": kind,
-                "body": body,
-                "run_id": random.choice(created["delivery_runs"]),
-                "customer_id": random.choice(fijos)["id"] if random.random() < 0.7 else None,
-                "resolved_at": None,
-            }
-        )
-    inserted = call("POST", "forum_posts", posts, prefer="return=representation")
-    created["forum_posts"] = [p["id"] for p in inserted]
-    save()
-    print(f"  {len(inserted)} notas en el foro")
 
+def reseed_lots() -> None:
+    """
+    Rehace solo los lotes, dejando pedidos y pagos como están.
+
+    Sirve para recalibrar el galpón —tamaño de los lotes, tasa de postura—
+    sin volver a montar seis semanas de pedidos que ya estaban bien.
+    """
+    if not LEDGER.exists():
+        sys.exit(f"No existe {LEDGER}: corre primero la siembra completa.")
+
+    created = json.loads(LEDGER.read_text('utf-8'))
+
+    def save() -> None:
+        LEDGER.write_text(json.dumps(created, indent=2), 'utf-8')
+
+    for lot_id in created.get('hen_lots', []):
+        call("DELETE", f"hen_lots?id=eq.{lot_id}", prefer="return=minimal")
+    created['hen_lots'] = []
     save()
-    print(f"\nListo. Registro de lo sembrado en {LEDGER}")
+
+    _seed_lots(created, save)
+    print("\nLotes rehechos. Pedidos y pagos intactos.")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -415,9 +447,19 @@ def main() -> int:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--clear", action="store_true", help="borrar lo sembrado")
+    parser.add_argument(
+        "--lots-only",
+        action="store_true",
+        help="rehacer solo los lotes y su producción, sin tocar pedidos ni pagos",
+    )
     args = parser.parse_args()
 
-    clear() if args.clear else seed()
+    if args.clear:
+        clear()
+    elif args.lots_only:
+        reseed_lots()
+    else:
+        seed()
     return 0
 
 
