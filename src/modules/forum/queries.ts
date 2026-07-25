@@ -14,8 +14,9 @@ export async function listPosts(filter: PostFilter = {}): Promise<Post[]> {
     .from('forum_posts')
     .select(
       'id, author_id, kind, body, run_id, customer_id, resolved_at, created_at, ' +
-        'profiles(full_name), delivery_runs(delivery_date), customers(name), ' +
-        'forum_replies(id, body, created_at, profiles(full_name))',
+        'author:profiles!forum_posts_author_id_fkey(full_name), ' +
+        'delivery_runs(delivery_date), customers(name), ' +
+        'forum_replies(id, body, created_at, author:profiles(full_name))',
     )
     .order('created_at', { ascending: false })
     .limit(200)
@@ -37,14 +38,14 @@ export async function listPosts(filter: PostFilter = {}): Promise<Post[]> {
       customer_id: string | null
       resolved_at: string | null
       created_at: string
-      profiles: { full_name: string } | null
+      author: { full_name: string } | null
       delivery_runs: { delivery_date: string } | null
       customers: { name: string } | null
       forum_replies: {
         id: string
         body: string
         created_at: string
-        profiles: { full_name: string } | null
+        author: { full_name: string } | null
       }[]
     }
 
@@ -52,7 +53,7 @@ export async function listPosts(filter: PostFilter = {}): Promise<Post[]> {
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
       .map((reply) => ({
         id: reply.id,
-        authorName: reply.profiles?.full_name ?? '',
+        authorName: reply.author?.full_name ?? '',
         body: reply.body,
         createdAt: reply.created_at,
       }))
@@ -60,7 +61,7 @@ export async function listPosts(filter: PostFilter = {}): Promise<Post[]> {
     return {
       id: r.id,
       authorId: r.author_id,
-      authorName: r.profiles?.full_name ?? '',
+      authorName: r.author?.full_name ?? '',
       kind: r.kind,
       body: r.body,
       runId: r.run_id,

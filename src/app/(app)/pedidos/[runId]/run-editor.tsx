@@ -46,7 +46,10 @@ export function RunEditor({
   currentSellerId: string | null
 }) {
   const router = useRouter()
-  const editable = run.status === 'borrador'
+  // Un pedido confirmado se sigue editando: en la práctica siempre aparece una
+  // corrección después de despachar, y obligar a rehacerlo empuja a la gente de
+  // vuelta al papel. Cada cambio se refleja en la cartera al instante.
+  const confirmed = run.status !== 'borrador'
 
   const [addState, addAction, adding] = useActionState(addCustomerAction, initial)
   const [confirmState, confirmAction, confirming] = useActionState(
@@ -90,16 +93,32 @@ export function RunEditor({
 
   return (
     <div className="space-y-6">
-      {editable && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
-          <AddCustomer runId={run.id} candidates={candidates} action={addAction} pending={adding} />
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
+        <AddCustomer
+          runId={run.id}
+          candidates={candidates}
+          action={addAction}
+          pending={adding}
+          added={addState.message}
+        />
+        <span className="text-xs text-muted-foreground">
+          Los cambios se guardan solos.
+        </span>
+        {!confirmed && (
           <form action={confirmAction} className="ml-auto">
             <input type="hidden" name="runId" value={run.id} />
             <Button type="submit" disabled={confirming}>
               {confirming ? 'Confirmando…' : 'Confirmar pedido'}
             </Button>
           </form>
-        </div>
+        )}
+      </div>
+
+      {confirmed && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm dark:border-amber-800 dark:bg-amber-950/40">
+          Pedido confirmado: ya cuenta en la cartera. Se puede seguir editando y
+          cada cambio ajusta el saldo del cliente al instante.
+        </p>
       )}
 
       {paused.length > 0 && (
@@ -134,7 +153,7 @@ export function RunEditor({
                 </TableHead>
               ))}
               <TableHead className="text-right">Total</TableHead>
-              {editable && <TableHead className="w-10" />}
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,14 +163,14 @@ export function RunEditor({
                 order={order}
                 products={products}
                 runId={run.id}
-                editable={editable}
+                editable
                 mine={order.sellerId === currentSellerId}
               />
             ))}
             {orders.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={products.length + 2}
+                  colSpan={products.length + 3}
                   className="py-10 text-center text-muted-foreground"
                 >
                   Este pedido está vacío.
@@ -170,13 +189,22 @@ function AddCustomer({
   candidates,
   action,
   pending,
+  added,
 }: {
   runId: string
   candidates: Candidate[]
   action: (formData: FormData) => void
   pending: boolean
+  added: string | null
 }) {
   const [query, setQuery] = useState('')
+
+  // El buscador se limpia cuando la acción CONFIRMA, no al hacer clic.
+  // Limpiarlo en el onClick desmontaba el formulario antes de que el envío
+  // saliera del navegador, y el cliente nunca llegaba a agregarse.
+  useEffect(() => {
+    if (added) setQuery('')
+  }, [added])
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -201,7 +229,6 @@ function AddCustomer({
               <button
                 type="submit"
                 disabled={pending}
-                onClick={() => setQuery('')}
                 className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
               >
                 {c.name}

@@ -40,7 +40,9 @@ export default async function ReceiptPage({
       <style>{`
         @media print {
           header, .no-print { display: none !important; }
-          @page { size: letter; margin: 0; }
+          /* Los márgenes los pone la página, no el elemento: así el documento
+             conserva su tamaño real en papel en vez de escalarse. */
+          @page { size: letter; margin: 0.75in 0.85in; }
         }
       `}</style>
 
@@ -68,7 +70,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
 
   return (
     <article
-      className={`mx-auto mb-6 w-[8.5in] bg-white px-[0.9in] py-[0.7in] text-black shadow-sm print:mb-0 print:w-auto print:shadow-none ${
+      className={`mx-auto mb-6 w-[8.5in] bg-white px-[0.85in] py-[0.75in] text-black shadow-sm print:mb-0 print:w-full print:px-0 print:py-0 print:shadow-none ${
         last ? '' : 'print:break-after-page'
       }`}
       style={{ fontFamily: 'Cambria, Georgia, "Times New Roman", serif' }}
@@ -76,7 +78,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
       {/* ── Título a la izquierda, fecha y consecutivo a la derecha ── */}
       <div className="flex items-start justify-between gap-8">
         <h2
-          className="text-[26px] font-normal tracking-[0.02em] text-neutral-600"
+          className="text-[20pt] font-normal tracking-[0.02em] text-neutral-600"
           style={{ fontVariant: 'small-caps' }}
         >
           RECIBO DE ENTREGA
@@ -88,16 +90,16 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
         >
           <tbody>
             <tr>
-              <th className="w-[52px] bg-neutral-400 px-2 py-1 text-[8px] font-bold uppercase leading-tight text-white">
+              <th className="w-[42pt] bg-neutral-400 px-2 py-1 text-[7.5pt] font-bold uppercase leading-tight text-white">
                 Fecha
               </th>
-              <td className="w-[112px] bg-neutral-100 px-2 py-1 text-[11px] font-bold">
+              <td className="w-[86pt] bg-neutral-100 px-2 py-1 text-[10pt] font-bold">
                 {formatLongDate(receipt.deliveryDate)}
               </td>
-              <th className="w-[74px] bg-neutral-400 px-2 py-1 text-[8px] font-bold uppercase leading-tight text-white">
+              <th className="w-[58pt] bg-neutral-400 px-2 py-1 text-[7.5pt] font-bold uppercase leading-tight text-white">
                 Recibo No.
               </th>
-              <td className="w-[70px] bg-neutral-100 px-2 py-1 text-[11px] font-bold">
+              <td className="w-[52pt] bg-neutral-100 px-2 py-1 text-[10pt] font-bold">
                 {purchaseOrder?.number ?? '—'}
               </td>
             </tr>
@@ -107,9 +109,9 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
 
       {/* ── Destinatario ── */}
       <div className="mt-3 flex justify-end">
-        <div className="w-[3.1in]">
+        <div className="w-[2.9in]">
           <div
-            className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.08em] text-white"
+            className="px-2 py-[3px] text-[8pt] font-semibold uppercase tracking-[0.08em] text-white"
             style={{
               backgroundColor: VERDE_CLARO,
               fontFamily: 'Calibri, Arial, sans-serif',
@@ -117,7 +119,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
           >
             Información del destinatario
           </div>
-          <div className="mt-1 px-2 text-[10.5px] leading-[1.45] text-neutral-800">
+          <div className="mt-1 px-2 text-[10pt] leading-[1.45] text-neutral-800">
             <div className="text-neutral-500">Nombre de la persona o empresa</div>
             <div>{receipt.customerLegalName ?? receipt.customerName}</div>
             {receipt.customerNit && <div>Nit {receipt.customerNit}</div>}
@@ -128,7 +130,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
       </div>
 
       {/* ── Emisor ── */}
-      <div className="mt-6 text-[10.5px] leading-[1.5]">
+      <div className="mt-6 text-[10pt] leading-[1.5]">
         <div style={{ fontVariant: 'small-caps' }}>{company.legalName}</div>
         {company.taxId && <div className="font-bold">Nit {company.taxId}</div>}
         {company.brandName && (
@@ -137,30 +139,30 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
       </div>
 
       {company.contactBlock && (
-        <div className="mt-8 whitespace-pre-line text-[10.5px] leading-[1.5]">
+        <div className="mt-8 whitespace-pre-line text-[10pt] leading-[1.5]">
           {company.contactBlock}
         </div>
       )}
 
       {/* ── Productos ── */}
-      <table className="mt-10 w-full border-collapse text-[10px]">
+      <table className="mt-10 w-full border-collapse text-[9.5pt]">
         <thead>
           <tr style={{ backgroundColor: VERDE, color: 'white' }}>
             <th
-              className="px-3 py-[6px] text-center text-[9px] font-semibold uppercase tracking-[0.1em]"
+              className="px-3 py-[6px] text-center text-[8pt] font-semibold uppercase tracking-[0.1em]"
               style={{ width: '58%' }}
             >
               Descripción
             </th>
-            <th className="px-2 py-[6px] text-center text-[9px] font-semibold uppercase tracking-[0.08em]">
+            <th className="px-2 py-[6px] text-center text-[8pt] font-semibold uppercase tracking-[0.08em]">
               Qty
             </th>
-            <th className="px-2 py-[6px] text-center text-[8px] font-semibold leading-tight">
+            <th className="px-2 py-[6px] text-center text-[7.5pt] font-semibold leading-tight">
               Precio/
               <br />
               caja
             </th>
-            <th className="px-2 py-[6px] text-center text-[9px] font-semibold uppercase tracking-[0.08em]">
+            <th className="px-2 py-[6px] text-center text-[8pt] font-semibold uppercase tracking-[0.08em]">
               Total pkgs
             </th>
           </tr>
@@ -175,7 +177,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
                 </div>
                 {/* La cláusula de comodato va bajo su línea, como en el original. */}
                 {index === 0 && receipt.customerPoNote && (
-                  <p className="mt-1 pl-5 text-[8px] leading-[1.35] text-neutral-700">
+                  <p className="mt-1 pl-5 text-[7.5pt] leading-[1.35] text-neutral-700">
                     {receipt.customerPoNote}
                   </p>
                 )}
@@ -203,7 +205,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
           <tr>
             <td colSpan={2} />
             <td
-              className="px-2 py-[6px] text-right text-[9px] font-semibold uppercase tracking-[0.1em]"
+              className="px-2 py-[6px] text-right text-[8pt] font-semibold uppercase tracking-[0.1em]"
               style={{ backgroundColor: VERDE, color: 'white' }}
             >
               Total
@@ -216,7 +218,7 @@ function ReceiptSheet({ receipt, last }: { receipt: Receipt; last: boolean }) {
       </table>
 
       <p
-        className="mt-10 text-[8px] uppercase tracking-[0.06em] text-neutral-700"
+        className="mt-10 text-[7.5pt] uppercase tracking-[0.06em] text-neutral-700"
         style={{ fontFamily: 'Calibri, Arial, sans-serif' }}
       >
         Firma del destinatario _______ ______________________

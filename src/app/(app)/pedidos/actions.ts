@@ -11,6 +11,7 @@ import {
   removeOrder,
   setOrderItem,
 } from '@/modules/orders'
+import { generatePurchaseOrdersForRun } from '@/modules/documents'
 
 export type RunActionState = { error: string | null; message: string | null }
 
@@ -80,11 +81,20 @@ export async function confirmRunAction(
   const runId = String(formData.get('runId') ?? '')
   try {
     const count = await confirmRun(runId)
+
+    // Aquí es donde nacen los consecutivos de los recibos. Se hace al
+    // confirmar y no antes: un número de recibo emitido para un pedido que
+    // todavía se está armando es un número quemado.
+    const { generated } = await generatePurchaseOrdersForRun(runId)
+
     revalidatePath(`/pedidos/${runId}`)
     revalidatePath('/pedidos')
+    revalidatePath('/ruta')
+
+    const extra = generated > 0 ? ` ${generated} orden(es) de compra numeradas.` : ''
     return {
       error: null,
-      message: `Pedido confirmado: ${count} entrega(s). Ya cuenta en la cartera.`,
+      message: `Pedido confirmado: ${count} entrega(s). Ya cuenta en la cartera.${extra}`,
     }
   } catch (e) {
     return { error: (e as Error).message, message: null }

@@ -47,7 +47,12 @@ export function FijosTable({
 
   useEffect(() => {
     if (addState.error) toast.error(addState.error)
-    if (addState.message) toast.success(addState.message)
+    // Se limpia al confirmar, no al hacer clic: limpiarlo antes desmonta el
+    // formulario y cancela el envío.
+    if (addState.message) {
+      toast.success(addState.message)
+      setSearch('')
+    }
   }, [addState])
 
   const matches = useMemo(() => {
@@ -83,7 +88,7 @@ export function FijosTable({
                   <span className="truncate text-sm">{c.name}</span>
                   <div className="flex shrink-0 gap-1">
                     {(['semanal', 'quincenal'] as const).map((r) => (
-                      <form key={r} action={addAction} onSubmit={() => setSearch('')}>
+                      <form key={r} action={addAction}>
                         <input type="hidden" name="customerId" value={c.id} />
                         <input type="hidden" name="recurrence" value={r} />
                         <Button type="submit" size="sm" variant="outline" disabled={adding}>

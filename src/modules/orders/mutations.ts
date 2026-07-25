@@ -20,6 +20,8 @@ export type GenerationResult = {
   run: DeliveryRun
   generated: number
   skippedByPause: number
+  /** El pedido de esa fecha ya existía: se abrió, no se creó otro. */
+  alreadyExisted?: boolean
 }
 
 /**
@@ -42,8 +44,30 @@ export async function createRun(
     .single()
 
   if (runError) {
+    // Ya hay un pedido para esa fecha. No es un error: o alguien más lo creó,
+    // o fue un doble clic. Se abre el que existe en lugar de fallar, y sobre
+    // todo en lugar de dejar dos pedidos para el mismo día.
     if (runError.code === '23505') {
-      throw new Error(`Ya existe un pedido para el ${deliveryDate}.`)
+      const { data: existing } = await supabase
+        .from('delivery_runs')
+        .select('id, delivery_date, status, notes, confirmed_at')
+        .eq('delivery_date', deliveryDate)
+        .single()
+
+      if (existing) {
+        return {
+          run: {
+            id: existing.id,
+            deliveryDate: existing.delivery_date,
+            status: existing.status,
+            notes: existing.notes,
+            confirmedAt: existing.confirmed_at,
+          },
+          generated: 0,
+          skippedByPause: 0,
+          alreadyExisted: true,
+        }
+      }
     }
     throw new Error(`No pude crear el pedido: ${runError.message}`)
   }
