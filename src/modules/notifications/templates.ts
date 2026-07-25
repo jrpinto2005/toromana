@@ -36,7 +36,7 @@ function greetingName(fullName: string): string {
 export function collectionMessage(ctx: CollectionContext): string {
   const { level } = urgencyFor(ctx.balanceCop, ctx.daysOverdue);
   const name = greetingName(ctx.customerName);
-  const greeting = name ? `Hola ${name}, ` : "Hola, ";
+  const greeting = name ? `Hola ${name} como estas?, ` : "Hola como estas?, ";
   const amount = formatCop(ctx.balanceCop);
 
   const since = ctx.oldestUnpaidDate

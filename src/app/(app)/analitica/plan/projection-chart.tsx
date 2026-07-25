@@ -285,7 +285,7 @@ export function ProjectionChart({
                 dataKey="meta"
                 name="Meta"
                 stroke="var(--target)"
-                strokeWidth={1}
+                strokeWidth={2}
                 strokeDasharray="9 5"
                 dot={false}
                 isAnimationActive={false}

@@ -113,13 +113,33 @@ export type Target = {
   eggsPerWeek: number
   /** Ajustes puntuales: subir o bajar la meta en un tramo. */
   adjustments?: { fromWeek: number; toWeek: number; eggsPerWeek: number }[]
+  /**
+   * Crecer hasta una meta mayor en un plazo, en vez de exigirla desde el lunes.
+   *
+   * Es la diferencia entre un objetivo comercial y uno alcanzable: si se pide
+   * el salto completo de una vez, el planificador ve un faltante gigante en la
+   * semana 1 —que ninguna compra puede tapar, porque una pollona tarda seis
+   * semanas— y responde comprando de más. Con la rampa, la meta sube al ritmo
+   * al que un galpón puede crecer.
+   */
+  ramp?: { toEggsPerWeek: number; overWeeks: number }
 }
 
 export function targetAt(target: Target, week: number): number {
   const adjustment = target.adjustments?.find(
     (a) => week >= a.fromWeek && week <= a.toWeek,
   )
-  return adjustment ? adjustment.eggsPerWeek : target.eggsPerWeek
+  if (adjustment) return adjustment.eggsPerWeek
+
+  if (target.ramp && target.ramp.overWeeks > 0) {
+    const progress = Math.min(1, week / target.ramp.overWeeks)
+    return Math.round(
+      target.eggsPerWeek +
+        (target.ramp.toEggsPerWeek - target.eggsPerWeek) * progress,
+    )
+  }
+
+  return target.eggsPerWeek
 }
 
 /**

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
-import { listEggProduction, listHenLots } from "@/modules/production";
+import { listEggProduction, listHenLots, listWeeklyLayingRate } from "@/modules/production";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -27,19 +27,19 @@ export default async function AnaliticaPage() {
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
 
-  const [lots, entries] = await Promise.all([
+  const [lots, entries, weeks] = await Promise.all([
     listHenLots({ includeInactive: true }),
     listEggProduction(),
+    listWeeklyLayingRate(),
   ]);
 
   const totalHens = lots.filter((l) => l.active).reduce((sum, l) => sum + l.currentCount, 0);
-  const latestWeek = entries[0]?.weekStart;
-  const latestEntries = entries.filter((e) => e.weekStart === latestWeek);
-  const latestEggs = latestEntries.reduce((sum, e) => sum + e.eggs, 0);
-  const avgRate =
-    latestEntries.length > 0
-      ? latestEntries.reduce((sum, e) => sum + (e.layingRate ?? 0), 0) / latestEntries.length
-      : null;
+
+  // La última semana ya viene agregada: sumando los dos tamaños de huevo y
+  // dividida por las gallinas que había esa semana, no por las de hoy.
+  const latest = weeks.at(-1);
+  const latestEggs = latest?.eggs ?? 0;
+  const avgRate = latest?.rate ?? null;
 
   return (
     <div className="space-y-6">
@@ -55,7 +55,9 @@ export default async function AnaliticaPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Figure label="Gallinas activas" value={String(totalHens)} />
         <Figure
-          label={latestWeek ? `Huevos, semana ${formatShortDate(latestWeek)}` : "Huevos última semana"}
+          label={
+            latest ? `Huevos, semana ${formatShortDate(latest.weekStart)}` : "Huevos última semana"
+          }
           value={String(latestEggs)}
         />
         <Figure label="Tasa de postura promedio" value={formatRate(avgRate)} />
@@ -67,7 +69,7 @@ export default async function AnaliticaPage() {
           <p className="text-sm text-muted-foreground">huevos / (gallinas × 7), por semana</p>
         </CardHeader>
         <CardContent>
-          <LayingRateChart entries={entries} />
+          <LayingRateChart weeks={weeks} />
         </CardContent>
       </Card>
 

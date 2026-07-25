@@ -17,7 +17,14 @@ export type {
   RecordLotEventInput,
 } from "./types";
 
-export { listHenLots, getHenLot, listLotEvents, listEggProduction } from "./queries";
+export {
+  listHenLots,
+  getHenLot,
+  listLotEvents,
+  listEggProduction,
+  listWeeklyLayingRate,
+  type WeeklyLayingRate,
+} from "./queries";
 export { createHenLot, retireHenLot, recordLotEvent, recordEggProduction } from "./actions";
 
 // ── Planeación de producción ──
@@ -51,6 +58,8 @@ export {
 export {
   getPlanningInputs,
   getWeeklyDemandEggs,
+  EGGS_PER_HALF_TRAY,
+  EGGS_PER_TRAY,
   type PlanningInputs,
   type LotHistory,
 } from "./planning-queries";

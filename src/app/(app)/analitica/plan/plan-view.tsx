@@ -31,6 +31,12 @@ type LotHistory = {
 // si la muda del lote nuevo va a caer sobre el pico de otro o sobre su valle.
 const HORIZON = 78
 
+/**
+ * Los huevos se venden por cubeta de 30 o media de 15; un huevo suelto no.
+ * Una meta que no sea múltiplo de 15 no se puede despachar.
+ */
+const toSellable = (eggs: number) => Math.round(eggs / 15) * 15
+
 export function PlanView({
   lots,
   history,
@@ -65,9 +71,18 @@ export function PlanView({
     eggsPerWeek: number
   } | null>(null)
 
+  // Crecer hasta una meta mayor en un plazo. Sin esto, pedir el salto completo
+  // desde el lunes hace que el planificador vea un faltante que ninguna compra
+  // puede tapar —una pollona tarda seis semanas— y compre de más.
+  const [ramp, setRamp] = useState<{ to: string; weeks: string } | null>(null)
+
   const targetSpec = useMemo(
     () => ({
       eggsPerWeek: target,
+      ramp:
+        ramp && Number(ramp.to) > 0 && Number(ramp.weeks) > 0
+          ? { toEggsPerWeek: Number(ramp.to), overWeeks: Number(ramp.weeks) }
+          : undefined,
       adjustments: scenario
         ? [
             {
@@ -78,7 +93,7 @@ export function PlanView({
           ]
         : undefined,
     }),
-    [target, scenario],
+    [target, scenario, ramp],
   )
 
   // El plan se recalcula en el navegador: mover la meta y ver el efecto al
@@ -147,10 +162,15 @@ export function PlanView({
             onChange={(e) => setTargetText(e.target.value)}
             className="w-36"
           />
+          <p className="text-xs text-muted-foreground">
+            {(target / 30).toLocaleString('es-CO', { maximumFractionDigits: 1 })}{' '}
+            cubetas
+            {target % 15 !== 0 && ' · no es múltiplo de 15'}
+          </p>
         </div>
 
         <div className="flex gap-2">
-          {[demandPerWeek, Math.round(demandPerWeek * 1.2), 3000].map((preset, i) => (
+          {[demandPerWeek, toSellable(demandPerWeek * 1.2), 3000].map((preset, i) => (
             <Button
               key={i}
               type="button"
@@ -165,6 +185,8 @@ export function PlanView({
 
         <ScenarioControl scenario={scenario} onChange={setScenario} target={target} />
       </div>
+
+      <RampControl ramp={ramp} onChange={setRamp} target={target} />
 
       {/* ── Proyección ── */}
       <ProjectionChart
@@ -577,5 +599,89 @@ function SendToForum({
         {state.message ? 'Ya está en el foro' : pending ? 'Enviando…' : 'Mandar al foro'}
       </Button>
     </form>
+  )
+}
+
+/**
+ * "Llegar a X huevos en Y semanas".
+ *
+ * La meta deja de ser una línea plana y se vuelve una pendiente. Es la
+ * diferencia entre un objetivo comercial y uno alcanzable: un galpón no salta
+ * de dos mil a tres mil huevos el lunes siguiente, crece al ritmo al que
+ * entran y maduran los lotes.
+ */
+function RampControl({
+  ramp,
+  onChange,
+  target,
+}: {
+  ramp: { to: string; weeks: string } | null
+  onChange: (r: { to: string; weeks: string } | null) => void
+  target: number
+}) {
+  if (!ramp) {
+    return (
+      <div className="rounded-lg border border-dashed bg-background p-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            onChange({ to: String(Math.round((target * 1.4) / 15) * 15), weeks: '26' })
+          }
+        >
+          Plan de crecimiento: llegar a X huevos en Y semanas
+        </Button>
+      </div>
+    )
+  }
+
+  const to = Number(ramp.to) || 0
+  const weeks = Number(ramp.weeks) || 1
+  const perWeek = Math.round((to - target) / weeks)
+
+  return (
+    <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-background p-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="rampTo">Llegar a</Label>
+        <Input
+          id="rampTo"
+          type="number"
+          step={15}
+          value={ramp.to}
+          onChange={(e) => onChange({ ...ramp, to: e.target.value })}
+          className="w-32"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="rampWeeks">en (semanas)</Label>
+        <Input
+          id="rampWeeks"
+          type="number"
+          min={1}
+          max={78}
+          value={ramp.weeks}
+          onChange={(e) => onChange({ ...ramp, weeks: e.target.value })}
+          className="w-24"
+        />
+      </div>
+
+      <p className="max-w-md text-sm text-muted-foreground">
+        La meta sube en línea recta desde {target.toLocaleString('es-CO')} hasta{' '}
+        {to.toLocaleString('es-CO')} huevos, {perWeek > 0 ? '+' : ''}
+        {perWeek.toLocaleString('es-CO')} por semana, y de ahí se sostiene. El
+        plan de compras se recalcula contra esa pendiente.
+      </p>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="ml-auto"
+        onClick={() => onChange(null)}
+      >
+        Quitar
+      </Button>
+    </div>
   )
 }

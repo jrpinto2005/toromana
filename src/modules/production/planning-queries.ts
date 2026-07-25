@@ -177,7 +177,12 @@ export async function getWeeklyDemandEggs(): Promise<number> {
 
   const weeks = [...perWeek.values()]
   if (weeks.length === 0) return 0
-  return Math.round(weeks.reduce((a, b) => a + b, 0) / weeks.length)
+
+  // El promedio de varias semanas cae en cualquier número, pero un huevo suelto
+  // no se vende: la unidad más pequeña es la media cubeta, de 15. Una meta de
+  // 2.149 no es alcanzable ni interpretable — se redondea a la unidad real.
+  const average = weeks.reduce((a, b) => a + b, 0) / weeks.length
+  return Math.round(average / EGGS_PER_HALF_TRAY) * EGGS_PER_HALF_TRAY
 }
 
 /** Semana del año de una fecha ISO, 0-51. */
@@ -185,6 +190,10 @@ function weekOfYear(iso: IsoDate): number {
   const [year] = iso.split('-').map(Number)
   return Math.floor(daysBetween(`${year}-01-01`, iso) / 7) % SEASON_WEEKS
 }
+
+/** Media cubeta: la presentación más pequeña que se vende. */
+export const EGGS_PER_HALF_TRAY = 15
+export const EGGS_PER_TRAY = 30
 
 function eggsPerUnit(productName: string): number {
   if (productName === 'Cubeta') return 30

@@ -7,6 +7,7 @@
  */
 
 export { createHenLot, retireHenLot, recordLotEvent, recordEggProduction } from "./actions";
+export type { WeeklyLayingRate } from "./queries";
 export type {
   ActionResult,
   CreateHenLotInput,

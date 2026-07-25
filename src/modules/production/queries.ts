@@ -114,3 +114,79 @@ export async function listEggProduction(opts?: {
     };
   });
 }
+
+export type WeeklyLayingRate = {
+  weekStart: string;
+  /** Huevos de la semana, sumando ambos tamaños. */
+  eggs: number;
+  smallEggs: number;
+  /** Gallinas que había ESA semana, no las de hoy. */
+  hens: number;
+  /** Huevos por gallina por día. */
+  rate: number;
+};
+
+/**
+ * Tasa de postura del galpón, semana a semana.
+ *
+ * Existe porque calcularla fila por fila daba dos cosas mal a la vez. La
+ * producción se registra separada por tamaño de huevo, así que cada semana
+ * tiene dos filas y cada una mostraba la mitad de la tasa real. Y se dividía
+ * por las gallinas de hoy, no por las de esa semana: un lote que ya se vendió
+ * dejaba sus semanas divididas por cero, y las semanas viejas de un lote
+ * grande quedaban divididas por lo que sobrevive hoy.
+ */
+export async function listWeeklyLayingRate(): Promise<WeeklyLayingRate[]> {
+  const supabase = await createClient();
+
+  const [{ data: lotRows }, { data: eventRows }, { data: productionRows }] =
+    await Promise.all([
+      supabase.from("hen_lots").select("id, initial_count"),
+      supabase.from("hen_lot_events").select("lot_id, event_date, type, quantity"),
+      supabase.from("egg_production").select("lot_id, week_start, eggs, size"),
+    ]);
+
+  const lots = lotRows ?? [];
+  const events = eventRows ?? [];
+
+  const aliveAt = (lotId: string, initial: number, date: string): number => {
+    let alive = initial;
+    for (const e of events) {
+      if (e.lot_id !== lotId || e.event_date > date) continue;
+      alive += e.type === "ingreso" ? e.quantity : -e.quantity;
+    }
+    return Math.max(0, alive);
+  };
+
+  const byWeek = new Map<string, { eggs: number; small: number; hens: number }>();
+  const counted = new Set<string>();
+
+  for (const row of productionRows ?? []) {
+    const lot = lots.find((l) => l.id === row.lot_id);
+    if (!lot) continue;
+
+    const acc = byWeek.get(row.week_start) ?? { eggs: 0, small: 0, hens: 0 };
+    acc.eggs += row.eggs;
+    if (row.size === "pequeno") acc.small += row.eggs;
+
+    // Las gallinas de un lote se cuentan una sola vez por semana, aunque esa
+    // semana traiga una fila de huevo normal y otra de pequeño.
+    const key = `${row.week_start}:${row.lot_id}`;
+    if (!counted.has(key)) {
+      counted.add(key);
+      acc.hens += aliveAt(lot.id, lot.initial_count, row.week_start);
+    }
+
+    byWeek.set(row.week_start, acc);
+  }
+
+  return [...byWeek.entries()]
+    .map(([weekStart, acc]) => ({
+      weekStart,
+      eggs: acc.eggs,
+      smallEggs: acc.small,
+      hens: acc.hens,
+      rate: acc.hens > 0 ? acc.eggs / (acc.hens * 7) : 0,
+    }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+}
