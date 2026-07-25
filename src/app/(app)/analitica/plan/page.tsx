@@ -36,7 +36,8 @@ export default async function PlanPage() {
       <PlanView
         lots={inputs.lots}
         history={inputs.history}
-        fit={inputs.fit}
+        model={inputs.model}
+        firstWeekOfYear={inputs.firstWeekOfYear}
         actuals={inputs.actuals}
         hensOnHand={inputs.hensOnHand}
         demandPerWeek={demand}

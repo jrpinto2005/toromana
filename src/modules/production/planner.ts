@@ -1,8 +1,10 @@
 import {
   layingRate,
   PRODUCTIVE_WEEKS,
+  SEASON_WEEKS,
   WEEKS_TO_LAY,
   type CurveParams,
+  type Model,
 } from './curve'
 
 /** Mortalidad semanal típica en un galpón sano. */
@@ -24,6 +26,9 @@ export type PlannedLot = {
   proposed?: boolean
 }
 
+/** Semana del año en la que arranca la proyección, para leer la estacionalidad. */
+export type Calendar = { firstWeekOfYear: number }
+
 export type WeekProjection = {
   week: number
   /** Huevos de esa semana, por lote. */
@@ -41,15 +46,23 @@ export type WeekProjection = {
  */
 export function project(
   lots: PlannedLot[],
-  params: CurveParams,
+  model: Model,
   weeks: number,
+  calendar: Calendar = { firstWeekOfYear: 0 },
 ): WeekProjection[] {
   const out: WeekProjection[] = []
+  const params: CurveParams = model.params
 
   for (let week = 0; week < weeks; week++) {
     const byLot: Record<string, number> = {}
     let total = 0
     let hens = 0
+
+    // Lo estacional afecta a todo el galpón la misma semana; lo de la edad y lo
+    // del lote son propios de cada uno. De ahí que las franjas ondulen juntas
+    // pero no suban ni bajen a la par.
+    const season =
+      model.seasonal[(calendar.firstWeekOfYear + week) % SEASON_WEEKS] ?? 1
 
     for (const lot of lots) {
       if (lot.exitsAtWeek !== null && week >= lot.exitsAtWeek) continue
@@ -57,8 +70,11 @@ export function project(
       const age = lot.ageWeeks + week
       if (age < 0) continue // todavía no llega al galpón
 
+      // Un lote propuesto todavía no tiene historia: rinde como el promedio.
+      const scale = model.lotEffects.get(lot.id)?.scale ?? 1
+
       const alive = Math.round(lot.hens * Math.pow(1 - WEEKLY_MORTALITY, Math.max(0, age)))
-      const eggs = Math.round(alive * layingRate(age, params) * 7)
+      const eggs = Math.round(alive * layingRate(age, params) * scale * season * 7)
 
       byLot[lot.id] = eggs
       total += eggs
@@ -122,11 +138,13 @@ export function targetAt(target: Target, week: number): number {
  */
 export function plan(
   lots: PlannedLot[],
-  params: CurveParams,
+  model: Model,
   target: Target,
   horizonWeeks: number,
+  calendar: Calendar = { firstWeekOfYear: 0 },
 ): Plan {
-  const baseline = project(lots, params, horizonWeeks)
+  const params = model.params
+  const baseline = project(lots, model, horizonWeeks, calendar)
   const proposed: PlannedLot[] = []
   const purchases: Purchase[] = []
 
@@ -143,7 +161,7 @@ export function plan(
   let searchFrom = 0
 
   for (let round = 0; round < 8; round++) {
-    const current = project([...lots, ...proposed], params, horizonWeeks)
+    const current = project([...lots, ...proposed], model, horizonWeeks, calendar)
 
     const gapWeek = current.findIndex(
       (w) => w.week >= searchFrom && w.total < targetAt(target, w.week),
@@ -185,7 +203,7 @@ export function plan(
     })
   }
 
-  const projection = project([...lots, ...proposed], params, horizonWeeks)
+  const projection = project([...lots, ...proposed], model, horizonWeeks, calendar)
   const shortfallWeeks = projection
     .filter((w) => w.total < targetAt(target, w.week) * 0.98)
     .map((w) => w.week)

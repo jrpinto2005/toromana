@@ -24,12 +24,13 @@ export { createHenLot, retireHenLot, recordLotEvent, recordEggProduction } from 
 export {
   layingRate,
   smallEggShare,
-  fitCurve,
+  fitModel,
   PRIOR,
   WEEKS_TO_LAY,
   PRODUCTIVE_WEEKS,
   type CurveParams,
-  type Fit,
+  type Model,
+  type LotEffect,
   type Observation,
 } from "./curve";
 
@@ -39,6 +40,7 @@ export {
   targetAt,
   MIN_LOT,
   LOT_STEP,
+  type Calendar,
   type PlannedLot,
   type WeekProjection,
   type Purchase,

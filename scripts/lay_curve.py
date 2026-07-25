@@ -53,8 +53,36 @@ def small_egg_share(weeks: float) -> float:
     return max(0.0, min(1.0, math.exp(-(weeks - ONSET_WEEKS) / SMALL_EGG_DECAY)))
 
 
-def weekly_eggs(hens: int, weeks: float) -> tuple[int, int]:
-    """Huevos de la semana repartidos en (normales, pequeños)."""
-    total = round(hens * laying_rate(weeks) * 7)
+# Amplitud del efecto de la época. Es de segundo orden a propósito: lo que
+# manda es la edad del lote, esto solo ondula la curva.
+SEASON_AMPLITUDE = 0.06
+
+
+def seasonal_factor(week_of_year: int) -> float:
+    """
+    Lo que le pasa a todo el galpón al mismo tiempo.
+
+    Clima, calidad del alimento, horas de luz. Afecta a todos los lotes a la
+    vez —de ahí que sus curvas estén correlacionadas— pero no explica por qué
+    un lote sube mientras otro baja: eso lo dicta la edad de cada uno.
+    """
+    return 1 + SEASON_AMPLITUDE * math.sin(2 * math.pi * (week_of_year - 8) / 52)
+
+
+def weekly_eggs(
+    hens: int,
+    weeks: float,
+    lot_factor: float = 1.0,
+    week_of_year: int = 0,
+) -> tuple[int, int]:
+    """
+    Huevos de la semana repartidos en (normales, pequeños).
+
+    `lot_factor` es lo propio del lote: raza, alimento que le tocó, época en
+    que entró. Dos lotes de la misma edad no ponen igual, y sin esto todas las
+    curvas del galpón subirían y bajarían en paralelo.
+    """
+    rate = laying_rate(weeks) * lot_factor * seasonal_factor(week_of_year)
+    total = round(hens * rate * 7)
     small = round(total * small_egg_share(weeks))
     return total - small, small

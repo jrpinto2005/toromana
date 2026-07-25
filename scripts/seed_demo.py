@@ -311,15 +311,19 @@ def _seed_lots(created: dict, save) -> None:
     # ~700 gallinas en total, repartidas en cuatro momentos del ciclo. Es lo que
     # hace que la producción semanal oscile entre 2.100 y 3.000 huevos sin que
     # nadie haya cambiado nada: simplemente los lotes envejecen a destiempo.
+    # El cuarto valor es la productividad propia del lote. Dos lotes de la misma
+    # edad no ponen igual —raza, alimento, época de entrada— y sin esa diferencia
+    # todas las franjas del gráfico subirían y bajarían en paralelo, que es
+    # justamente lo que no pasa en un galpón real.
     lots_spec = [
-        ("L-2025-A", 180, 64, "Lohmann Brown"),   # en declive, ya debió salir
-        ("L-2025-B", 150, 40, "Lohmann Brown"),   # saliendo del pico
-        ("L-2026-A", 170, 16, "Isa Brown"),       # en pico
-        ("L-2026-B", 200, 3, "Isa Brown"),        # todavía sin poner
+        ("L-2025-A", 180, 64, "Lohmann Brown", 1.06),  # buen lote, ya debió salir
+        ("L-2025-B", 150, 40, "Lohmann Brown", 0.93),  # flojo desde el arranque
+        ("L-2026-A", 170, 16, "Isa Brown", 1.09),      # el mejor del galpón
+        ("L-2026-B", 200, 3, "Isa Brown", 0.97),       # todavía sin poner
     ]
 
     today = date.today()
-    for code, hens, age_weeks, breed in lots_spec:
+    for code, hens, age_weeks, breed, factor in lots_spec:
         entry = today - timedelta(weeks=age_weeks)
         lot = call(
             "POST",
@@ -358,8 +362,9 @@ def _seed_lots(created: dict, save) -> None:
                     }
                 )
 
-            normal, small = weekly_eggs(alive, week_index)
-            noise = random.uniform(0.94, 1.06)
+            week_of_year = week_start.isocalendar()[1] % 52
+            normal, small = weekly_eggs(alive, week_index, factor, week_of_year)
+            noise = random.uniform(0.97, 1.03)
             normal, small = round(normal * noise), round(small * noise)
 
             if normal > 0:

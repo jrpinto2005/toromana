@@ -28,7 +28,8 @@ export {
   WEEKS_TO_LAY,
   PRODUCTIVE_WEEKS,
   type CurveParams,
-  type Fit,
+  type Model,
+  type LotEffect,
 } from "./curve";
 
 export {
@@ -37,6 +38,7 @@ export {
   targetAt,
   MIN_LOT,
   LOT_STEP,
+  type Calendar,
   type PlannedLot,
   type WeekProjection,
   type Purchase,

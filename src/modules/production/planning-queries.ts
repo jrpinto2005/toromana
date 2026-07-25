@@ -2,7 +2,13 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 import { daysBetween, today, weekStart, type IsoDate } from '@/lib/dates'
-import { fitCurve, PRODUCTIVE_WEEKS, type Fit, type Observation } from './curve'
+import {
+  fitModel,
+  PRODUCTIVE_WEEKS,
+  SEASON_WEEKS,
+  type Model,
+  type Observation,
+} from './curve'
 import type { PlannedLot } from './planner'
 
 export type LotHistory = {
@@ -18,7 +24,9 @@ export type LotHistory = {
 export type PlanningInputs = {
   lots: PlannedLot[]
   history: LotHistory[]
-  fit: Fit
+  model: Model
+  /** Semana del año en que arranca la proyección. */
+  firstWeekOfYear: number
   /** Producción real de las últimas semanas, para contrastar con el modelo. */
   actuals: { weekStart: IsoDate; eggs: number }[]
   hensOnHand: number
@@ -81,6 +89,8 @@ export async function getPlanningInputs(): Promise<PlanningInputs> {
       weeks: daysBetween(lot.entry_date, week) / 7,
       rate: eggs / (hens * 7),
       hens,
+      lotId: lot.id,
+      weekOfYear: weekOfYear(week),
     })
   }
 
@@ -122,7 +132,8 @@ export async function getPlanningInputs(): Promise<PlanningInputs> {
       currentCount: aliveAt(l.id, l.initial_count, currentWeek),
       active: l.active,
     })),
-    fit: fitCurve(observations),
+    model: fitModel(observations),
+    firstWeekOfYear: weekOfYear(currentWeek),
     actuals,
     hensOnHand: planned.reduce((sum, l) => sum + l.hens, 0),
   }
@@ -167,6 +178,12 @@ export async function getWeeklyDemandEggs(): Promise<number> {
   const weeks = [...perWeek.values()]
   if (weeks.length === 0) return 0
   return Math.round(weeks.reduce((a, b) => a + b, 0) / weeks.length)
+}
+
+/** Semana del año de una fecha ISO, 0-51. */
+function weekOfYear(iso: IsoDate): number {
+  const [year] = iso.split('-').map(Number)
+  return Math.floor(daysBetween(`${year}-01-01`, iso) / 7) % SEASON_WEEKS
 }
 
 function eggsPerUnit(productName: string): number {

@@ -1,16 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import {
   plan as buildPlan,
   targetAt,
   LOT_STEP,
   MIN_LOT,
   WEEKS_TO_LAY,
-  type Fit,
+  type Model,
   type PlannedLot,
 } from '@/modules/production/client'
 import { addDays, formatShortDate, type IsoDate } from '@/lib/dates'
+import { sendPurchaseToForumAction, type PurchaseState } from './actions'
 import { ProjectionChart } from './projection-chart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +32,8 @@ const HORIZON = 52
 export function PlanView({
   lots,
   history,
-  fit,
+  model,
+  firstWeekOfYear,
   actuals,
   hensOnHand,
   demandPerWeek,
@@ -38,7 +41,8 @@ export function PlanView({
 }: {
   lots: PlannedLot[]
   history: LotHistory[]
-  fit: Fit
+  model: Model
+  firstWeekOfYear: number
   actuals: { weekStart: IsoDate; eggs: number }[]
   hensOnHand: number
   demandPerWeek: number
@@ -74,8 +78,8 @@ export function PlanView({
   // instante es lo que convierte esto en una herramienta de decisión y no en
   // un reporte.
   const result = useMemo(
-    () => buildPlan(lots, fit.params, targetSpec, HORIZON),
-    [lots, fit.params, targetSpec],
+    () => buildPlan(lots, model, targetSpec, HORIZON, { firstWeekOfYear }),
+    [lots, model, targetSpec, firstWeekOfYear],
   )
 
   const weekDate = (week: number) => addDays(firstWeek, week * 7)
@@ -121,7 +125,7 @@ export function PlanView({
       </div>
 
       {/* ── De dónde sale el modelo ── */}
-      <ModelNote fit={fit} />
+      <ModelNote model={model} history={history} />
 
       {/* ── Meta ── */}
       <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-background p-4">
@@ -214,36 +218,94 @@ function Stat({
  * de historia la curva es un supuesto de la especie, no un aprendizaje, y eso
  * tiene que estar escrito en la pantalla y no en la documentación.
  */
-function ModelNote({ fit }: { fit: Fit }) {
-  const pct = Math.round(fit.confidence * 100)
+function ModelNote({
+  model,
+  history,
+}: {
+  model: Model
+  history: LotHistory[]
+}) {
+  const pct = Math.round(model.confidence * 100)
   const learned = pct >= 60
 
+  const season = model.seasonal
+  const swing = Math.round((Math.max(...season) - Math.min(...season)) * 100)
+
+  const rated = history
+    .filter((h) => model.lotEffects.has(h.id))
+    .map((h) => ({ code: h.code, scale: model.lotEffects.get(h.id)!.scale }))
+    .sort((a, b) => b.scale - a.scale)
+
   return (
-    <div className="rounded-lg border bg-muted/30 p-4 text-sm">
-      <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="font-medium">
-          {learned
-            ? 'Curva ajustada a la historia del galpón'
-            : 'Curva estimada, todavía con poca historia'}
-        </span>
-        <span className="text-muted-foreground">
-          · {fit.observations} semanas de datos · {pct}% del modelo viene de tus
-          registros
-        </span>
+    <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+      <div>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-medium">
+            {learned
+              ? 'Curva ajustada a la historia del galpón'
+              : 'Curva estimada, todavía con poca historia'}
+          </span>
+          <span className="text-muted-foreground">
+            · {model.observations} semanas de datos · {pct}% del modelo viene de
+            tus registros
+          </span>
+        </div>
+        <p className="mt-1 text-muted-foreground">
+          Lo que manda es el tiempo en galpón: pico de{' '}
+          {model.params.peakRate.toFixed(2)} huevos por gallina al día hacia las{' '}
+          {Math.round(model.params.onsetWeeks + 4)} semanas, sostenido hasta la{' '}
+          {Math.round(model.params.plateauWeeks)} y en declive desde ahí. Error
+          medio: {model.rmse.toFixed(3)} huevos por gallina al día.
+          {!learned && (
+            <>
+              {' '}
+              Mientras haya poca historia el modelo se apoya en el comportamiento
+              típico de la especie; cada semana que Producción registra lo corrige.
+            </>
+          )}
+        </p>
       </div>
-      <p className="mt-1 text-muted-foreground">
-        Pico de {fit.params.peakRate.toFixed(2)} huevos por gallina al día, que
-        se alcanza a las {Math.round(fit.params.onsetWeeks + 4)} semanas y se
-        sostiene hasta la {Math.round(fit.params.plateauWeeks)}. Error medio del
-        ajuste: {fit.rmse.toFixed(3)} huevos por gallina al día.
-        {!learned && (
-          <>
-            {' '}
-            Mientras haya poca historia el modelo se apoya en el comportamiento
-            típico de la especie; cada semana que Producción registra lo corrige.
-          </>
-        )}
-      </p>
+
+      {rated.length > 0 && (
+        <div>
+          <div className="font-medium">Productividad propia de cada lote</div>
+          <p className="text-muted-foreground">
+            Dos lotes de la misma edad no ponen igual: pesan la raza, el alimento
+            y la época en que entraron. Esto es cuánto rinde cada uno frente a lo
+            que la curva esperaría a su edad.
+          </p>
+          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            {rated.map((lot) => (
+              <li key={lot.code} className="tabular-nums">
+                <span className="text-muted-foreground">{lot.code}</span>{' '}
+                <span
+                  className={
+                    lot.scale >= 1.02
+                      ? 'font-medium text-emerald-700 dark:text-emerald-400'
+                      : lot.scale <= 0.98
+                        ? 'font-medium text-amber-700 dark:text-amber-400'
+                        : 'font-medium'
+                  }
+                >
+                  {lot.scale >= 1 ? '+' : ''}
+                  {Math.round((lot.scale - 1) * 100)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {swing >= 2 && (
+        <div>
+          <span className="font-medium">Efecto de la época: ±{Math.round(swing / 2)}%</span>{' '}
+          <span className="text-muted-foreground">
+            — lo que sube y baja en todos los lotes a la vez, y que no explica la
+            edad: clima, alimento, horas de luz. Es de segundo orden, pero es lo
+            que hace que la producción ondule en vez de bajar en línea recta.
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -386,6 +448,14 @@ function Purchases({
                 unas {WEEKS_TO_LAY} semanas en arrancar, así que este es el último
                 momento para pedirlas.
               </p>
+
+              <SendToForum
+                hens={purchase.hens}
+                orderBy={weekDate(purchase.orderAtWeek)}
+                layingFrom={weekDate(purchase.layingFromWeek)}
+                deficit={Math.round(purchase.deficit)}
+                urgent={purchase.orderAtWeek === 0}
+              />
             </li>
           )
         })}
@@ -457,5 +527,45 @@ function Exits({ history }: { history: LotHistory[] }) {
         </table>
       </div>
     </div>
+  )
+}
+
+const purchaseInitial: PurchaseState = { error: null, message: null }
+
+/** Convierte una recomendación en un pendiente del equipo. */
+function SendToForum({
+  hens,
+  orderBy,
+  layingFrom,
+  deficit,
+  urgent,
+}: {
+  hens: number
+  orderBy: IsoDate
+  layingFrom: IsoDate
+  deficit: number
+  urgent: boolean
+}) {
+  const [state, formAction, pending] = useActionState(
+    sendPurchaseToForumAction,
+    purchaseInitial,
+  )
+
+  useEffect(() => {
+    if (state.error) toast.error(state.error)
+    if (state.message) toast.success(state.message)
+  }, [state])
+
+  return (
+    <form action={formAction} className="mt-3">
+      <input type="hidden" name="hens" value={hens} />
+      <input type="hidden" name="orderBy" value={orderBy} />
+      <input type="hidden" name="layingFrom" value={layingFrom} />
+      <input type="hidden" name="deficit" value={deficit} />
+      <input type="hidden" name="urgent" value={String(urgent)} />
+      <Button type="submit" size="sm" variant="outline" disabled={pending || !!state.message}>
+        {state.message ? 'Ya está en el foro' : pending ? 'Enviando…' : 'Mandar al foro'}
+      </Button>
+    </form>
   )
 }
