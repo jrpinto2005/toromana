@@ -191,11 +191,13 @@ export function FijosTable({
 
             {fijos.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={products.length + 3}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  No hay clientes fijos. Agrega uno con el buscador de arriba.
+                <TableCell colSpan={products.length + 3} className="py-10 text-center">
+                  <p className="font-medium">No hay clientes fijos todavía</p>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                    Búscalo arriba y dile si es semanal o quincenal. Lo que le
+                    pongas en esta tabla es lo que va a aparecer solo en el
+                    pedido de cada semana.
+                  </p>
                 </TableCell>
               </TableRow>
             )}

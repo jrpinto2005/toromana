@@ -4,6 +4,7 @@ import { formatCop } from '@/lib/money'
 import { formatWeekdayDate, nextMonday } from '@/lib/dates'
 import { Badge } from '@/components/ui/badge'
 import { NewRunForm } from './new-run-form'
+import { EmptyState } from '@/components/empty-state'
 
 const STATUS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
   borrador: { label: 'Borrador', variant: 'outline' },
@@ -29,13 +30,11 @@ export default async function PedidosPage() {
       </div>
 
       {runs.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-background p-12 text-center">
-          <p className="font-medium">Todavía no hay ningún pedido</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crea el de esta semana y la lista se llena sola con los 33 clientes
-            fijos y su pedido habitual.
-          </p>
-        </div>
+        <EmptyState title="Todavía no hay ningún pedido">
+          Crea el de esta semana y la lista se llena sola: entran todos los
+          clientes fijos con su pedido habitual y al último precio que se les
+          cobró. De ahí en adelante los tres vendedores lo editan al tiempo.
+        </EmptyState>
       ) : (
         <div className="divide-y rounded-lg border bg-background">
           {runs.map((run) => (

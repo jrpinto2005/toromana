@@ -96,21 +96,11 @@ export function ProjectionChart({
           --series-6: #008300;
           --target: #e34948;
         }
-        @media (prefers-color-scheme: dark) {
-          :root:where(:not([data-theme="light"])) .viz-root {
-            --surface-1: #0a0a0a;
-            --text-secondary: #c3c2b7;
-            --grid: #2a2a28;
-            --series-1: #3987e5;
-            --series-2: #d95926;
-            --series-3: #199e70;
-            --series-4: #c98500;
-            --series-5: #d55181;
-            --series-6: #008300;
-            --target: #e66767;
-          }
-        }
-        :root[data-theme="dark"] .viz-root {
+        /* El interruptor de tema pone la clase dark en el html, y ese script
+           corre antes de pintar. Es la unica fuente de verdad: consultar
+           ademas prefers-color-scheme haria que el grafico ignorara una
+           eleccion explicita del usuario. */
+        .dark .viz-root {
           --surface-1: #0a0a0a;
           --text-secondary: #c3c2b7;
           --grid: #2a2a28;

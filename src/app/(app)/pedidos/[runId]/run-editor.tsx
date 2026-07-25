@@ -189,7 +189,9 @@ export function RunEditor({
                   colSpan={products.length + 3}
                   className="py-10 text-center text-muted-foreground"
                 >
-                  Este pedido está vacío.
+                  <span className="font-medium">Este pedido quedó vacío.</span>{' '}
+                  Agrega clientes con el buscador de arriba, o revisa en
+                  Fijos quién debería entrar solo cada semana.
                 </TableCell>
               </TableRow>
             )}

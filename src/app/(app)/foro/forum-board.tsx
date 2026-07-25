@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/empty-state'
 
 const initial: ForumState = { error: null, message: null }
 
@@ -84,9 +85,17 @@ export function ForumBoard({
         ))}
 
         {visible.length === 0 && (
-          <div className="rounded-lg border border-dashed bg-background p-12 text-center text-muted-foreground">
-            Nada por aquí todavía.
-          </div>
+          <EmptyState
+            title={
+              filter === 'todos'
+                ? 'El foro está vacío'
+                : 'Nada con ese filtro'
+            }
+          >
+            {filter === 'todos'
+              ? 'Aquí van las ideas, los pendientes y las quejas que hoy se pierden en los chats. Cada nota se puede amarrar a una semana o a un cliente, y sigue estando ahí cuando el mismo problema vuelva a aparecer.'
+              : 'Prueba con otro filtro, o mira todo.'}
+          </EmptyState>
         )}
       </div>
     </div>

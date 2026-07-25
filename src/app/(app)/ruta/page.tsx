@@ -8,6 +8,7 @@ import { RunPicker } from "./run-picker";
 import { formatCop } from "@/lib/money";
 import { formatWeekdayDate } from "@/lib/dates";
 import { RouteList } from "./route-list";
+import { EmptyState } from "@/components/empty-state";
 import { CsvButton } from "./csv-button";
 
 export const metadata = { title: "Ruta · Toromana" };
@@ -31,10 +32,11 @@ export default async function RutaPage({
 
   if (!run) {
     return (
-      <div className="rounded-xl border border-dashed py-16 text-center text-muted-foreground">
-        No hay ningún pedido confirmado todavía. Cuando se confirme el pedido de la
-        semana, la ruta aparece aquí.
-      </div>
+      <EmptyState title="No hay ruta para hoy">
+        La ruta aparece cuando alguien confirma el pedido de la semana. Ahí
+        vas a ver cada entrega con su dirección y sus cantidades, y podrás
+        marcarlas a medida que las hagas.
+      </EmptyState>
     );
   }
 

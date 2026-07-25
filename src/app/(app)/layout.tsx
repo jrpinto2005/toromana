@@ -5,6 +5,7 @@ import { countOpenPosts } from '@/modules/forum'
 import { logout } from '../(auth)/login/actions'
 import { Button } from '@/components/ui/button'
 import { Brand } from '@/components/brand'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { navFor } from './nav'
 import { NavLinks } from './nav-links'
 
@@ -47,6 +48,7 @@ export default async function AppLayout({
                 {ROLE_LABEL[profile.role] ?? profile.role}
               </div>
             </div>
+            <ThemeToggle />
             <form action={logout}>
               <Button type="submit" variant="ghost" size="sm">
                 Salir

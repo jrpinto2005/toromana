@@ -153,8 +153,24 @@ export function ReceivablesTable({
               });
               const link = whatsAppLink(row.phone, message);
 
+              // La plata vieja pesa distinto que la reciente. Una franja en el
+              // borde y el saldo más grande hacen que la fila urgente se vea
+              // antes de leerla — que es como se escanea una lista de cobros.
+              const critical = row.daysOverdue > 60;
+              const warning = row.daysOverdue > 30 && !critical;
+
               return (
-                <TableRow key={row.customerId}>
+                <TableRow
+                  key={row.customerId}
+                  className={cn(
+                    "border-l-4",
+                    critical
+                      ? "border-l-red-500 bg-red-500/[0.04]"
+                      : warning
+                        ? "border-l-amber-500 bg-amber-500/[0.04]"
+                        : "border-l-transparent",
+                  )}
+                >
                   <TableCell className="font-medium">
                     <Link href={`/cartera/${row.customerId}`} className="hover:underline">
                       {row.customerName}
@@ -163,14 +179,30 @@ export function ReceivablesTable({
                   <TableCell>
                     <UrgencyBadge level={row.urgencyLevel} />
                   </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
+                  <TableCell
+                    className={cn(
+                      "text-right font-mono tabular-nums",
+                      critical
+                        ? "text-base font-semibold text-red-700 dark:text-red-400"
+                        : warning
+                          ? "font-semibold text-amber-700 dark:text-amber-400"
+                          : "",
+                    )}
+                  >
                     {formatCop(row.balanceCop)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {row.oldestUnpaidDate ? (
                       <>
                         {formatShortDate(row.oldestUnpaidDate)}{" "}
-                        <span className="text-xs">({formatAge(row.daysOverdue)})</span>
+                        <span
+                          className={cn(
+                            "text-xs",
+                            critical && "font-medium text-red-700 dark:text-red-400",
+                          )}
+                        >
+                          ({formatAge(row.daysOverdue)})
+                        </span>
                       </>
                     ) : (
                       "—"

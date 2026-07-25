@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { ChunkReloadGuard } from './chunk-reload-guard'
+import { themeScript } from '@/components/theme-toggle'
 import './globals.css'
 
 const geistSans = Geist({
@@ -28,7 +29,14 @@ export default function RootLayout({
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // El script de tema toca la clase del <html> antes de que React hidrate,
+      // así que el marcado del servidor y el del cliente no coinciden a
+      // propósito. Sin esto React lo reporta como error.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ChunkReloadGuard />
         {children}
