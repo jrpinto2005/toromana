@@ -48,15 +48,54 @@ export async function createHenLot(input: CreateHenLotInput): Promise<ActionResu
 }
 
 /** Da de baja un lote (se deja de mostrar en la lista activa; su historial se conserva). */
-export async function retireHenLot(lotId: string): Promise<ActionResult> {
+/**
+ * Saca un lote de producción.
+ *
+ * Las gallinas salen de las cuentas, pero nada se borra: el retiro se registra
+ * como un movimiento de descarte por la cantidad que quedaba, así el conteo
+ * baja a cero por la misma vía que cualquier otra salida. El lote, sus
+ * movimientos y todas sus semanas de producción quedan intactos, que es lo que
+ * permite seguir comparando la curva de postura de un lote contra los que
+ * vinieron después.
+ */
+export async function retireHenLot(
+  lotId: string,
+  note?: string | null,
+): Promise<ActionResult> {
   const guard = await requireProduction();
   if (guard) return guard;
 
   const supabase = await createClient();
-  const { error } = await supabase.from("hen_lots").update({ active: false }).eq("id", lotId);
+  const profile = await getProfile();
+
+  const { data: lot } = await supabase
+    .from("v_hen_lot_status")
+    .select("current_count")
+    .eq("id", lotId)
+    .maybeSingle();
+
+  const remaining = lot?.current_count ?? 0;
+
+  if (remaining > 0) {
+    const { error } = await supabase.from("hen_lot_events").insert({
+      lot_id: lotId,
+      event_date: new Date().toISOString().slice(0, 10),
+      type: "descarte",
+      quantity: remaining,
+      note: note?.trim() || "Salida de producción del lote",
+      created_by: profile?.id ?? null,
+    });
+    if (error) return fail(`No se pudo registrar la salida: ${error.message}`);
+  }
+
+  const { error } = await supabase
+    .from("hen_lots")
+    .update({ active: false })
+    .eq("id", lotId);
   if (error) return fail(`No se pudo dar de baja el lote: ${error.message}`);
 
   revalidatePath("/produccion");
+  revalidatePath("/analitica");
   return { ok: true };
 }
 
@@ -105,10 +144,11 @@ export async function recordEggProduction(
       lot_id: input.lotId,
       week_start: input.weekStart,
       eggs: input.eggs,
+      size: input.size ?? "normal",
       note: input.note?.trim() || null,
       created_by: profile?.id ?? null,
     },
-    { onConflict: "lot_id,week_start" },
+    { onConflict: "lot_id,week_start,size" },
   );
 
   if (error) return fail(`No se pudo registrar la producción: ${error.message}`);

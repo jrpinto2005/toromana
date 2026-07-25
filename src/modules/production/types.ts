@@ -2,6 +2,12 @@ import type { IsoDate } from "@/lib/dates";
 
 export type LotEventType = "mortalidad" | "venta" | "ingreso" | "descarte";
 
+/**
+ * Los lotes nuevos ponen huevo pequeño sus primeras semanas. Medirlo aparte es
+ * lo que deja ver cuándo un lote empieza a producir huevo comercial.
+ */
+export type EggSize = "normal" | "pequeno";
+
 export type HenLot = {
   id: string;
   code: string;
@@ -28,6 +34,7 @@ export type EggProductionEntry = {
   lotCode: string;
   weekStart: IsoDate;
   eggs: number;
+  size: EggSize;
   note: string | null;
   /** `eggs / (currentCount × 7)`. `null` si el lote no tiene gallinas para dividir. */
   layingRate: number | null;
@@ -47,6 +54,7 @@ export type RecordEggProductionInput = {
   lotId: string;
   weekStart: IsoDate;
   eggs: number;
+  size?: EggSize;
   note?: string | null;
 };
 

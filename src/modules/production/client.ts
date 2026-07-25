@@ -11,6 +11,7 @@ export type {
   ActionResult,
   CreateHenLotInput,
   EggProductionEntry,
+  EggSize,
   HenLot,
   HenLotEvent,
   LotEventType,

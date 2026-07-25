@@ -20,7 +20,9 @@ export default async function ProduccionPage() {
     listEggProduction({ weekStart: week }),
   ]);
 
-  const existing = new Map(thisWeek.map((row) => [row.lotId, row.eggs]));
+  const existing = new Map(
+    thisWeek.map((row) => [`${row.lotId}:${row.size}`, row.eggs]),
+  );
   const totalHens = lots.reduce((sum, lot) => sum + lot.currentCount, 0);
 
   return (

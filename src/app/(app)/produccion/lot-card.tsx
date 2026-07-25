@@ -48,13 +48,21 @@ export function LotCard({ lot }: { lot: HenLot }) {
   }
 
   function retire() {
+    const note = window.prompt(
+      `Sacar de producción el lote ${lot.code}.\n\n` +
+        `Sus ${lot.currentCount} gallinas salen de las cuentas, pero el lote, ` +
+        `sus movimientos y su historial de producción se conservan.\n\n` +
+        `Motivo (opcional):`,
+    );
+    if (note === null) return;
+
     startTransition(async () => {
-      const result = await retireHenLot(lot.id);
+      const result = await retireHenLot(lot.id, note);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(`Lote ${lot.code} dado de baja.`);
+      toast.success(`Lote ${lot.code} salió de producción. El historial queda.`);
     });
   }
 
@@ -111,7 +119,7 @@ export function LotCard({ lot }: { lot: HenLot }) {
               Registrar
             </Button>
             <Button size="sm" variant="ghost" className="ml-auto text-muted-foreground" disabled={pending} onClick={retire}>
-              Dar de baja el lote
+              Sacar de producción
             </Button>
           </div>
           {lot.notes && <p className="text-sm text-muted-foreground">{lot.notes}</p>}

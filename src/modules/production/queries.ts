@@ -89,7 +89,7 @@ export async function listEggProduction(opts?: {
 
   let query = supabase
     .from("egg_production")
-    .select("id, lot_id, week_start, eggs, note, hen_lots(code)");
+    .select("id, lot_id, week_start, eggs, size, note, hen_lots(code)");
   if (opts?.weekStart) query = query.eq("week_start", opts.weekStart);
   if (opts?.lotId) query = query.eq("lot_id", opts.lotId);
 
@@ -108,6 +108,7 @@ export async function listEggProduction(opts?: {
       lotCode: lot?.code ?? "—",
       weekStart: row.week_start,
       eggs: row.eggs,
+      size: row.size,
       note: row.note,
       layingRate: currentCount > 0 ? row.eggs / (currentCount * 7) : null,
     };

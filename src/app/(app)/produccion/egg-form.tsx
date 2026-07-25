@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatWeekdayDate, weekStart } from "@/lib/dates";
-import { recordEggProduction, type HenLot } from "@/modules/production/client";
+import { recordEggProduction, type EggSize, type HenLot } from "@/modules/production/client";
 
 type Props = {
   lots: HenLot[];
@@ -17,20 +17,30 @@ type Props = {
 
 export function EggForm({ lots, existing }: Props) {
   const week = weekStart();
-  const [values, setValues] = useState<Record<string, string>>(
-    Object.fromEntries(lots.map((lot) => [lot.id, String(existing.get(lot.id) ?? "")])),
+  // Los lotes nuevos ponen huevo pequeño sus primeras semanas. Registrarlo
+  // aparte es lo que deja ver cuándo un lote pasa a producir huevo comercial.
+  const [size, setSize] = useState<EggSize>("normal");
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      lots.flatMap((lot) =>
+        (["normal", "pequeno"] as const).map((s) => [
+          `${lot.id}:${s}`,
+          String(existing.get(`${lot.id}:${s}`) ?? ""),
+        ]),
+      ),
+    ),
   );
   const [pending, startTransition] = useTransition();
 
   function submit(lotId: string) {
-    const eggs = Number.parseInt(values[lotId] ?? "", 10);
+    const eggs = Number.parseInt(values[`${lotId}:${size}`] ?? "", 10);
     if (!Number.isInteger(eggs) || eggs < 0) {
       toast.error("Escribe los huevos de la semana.");
       return;
     }
 
     startTransition(async () => {
-      const result = await recordEggProduction({ lotId, weekStart: week, eggs });
+      const result = await recordEggProduction({ lotId, weekStart: week, eggs, size });
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -46,6 +56,19 @@ export function EggForm({ lots, existing }: Props) {
       <CardHeader>
         <CardTitle>Producción de la semana</CardTitle>
         <p className="text-sm capitalize text-muted-foreground">{formatWeekdayDate(week)}</p>
+        <div className="mt-2 flex gap-1">
+          {(["normal", "pequeno"] as const).map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              variant={size === option ? "default" : "outline"}
+              onClick={() => setSize(option)}
+            >
+              {option === "normal" ? "Huevo normal" : "Huevo pequeño"}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {lots.map((lot) => (
@@ -54,9 +77,11 @@ export function EggForm({ lots, existing }: Props) {
             <span className="text-sm text-muted-foreground">{lot.currentCount} gallinas</span>
             <Input
               inputMode="numeric"
-              value={values[lot.id] ?? ""}
-              onChange={(e) => setValues((v) => ({ ...v, [lot.id]: e.target.value }))}
-              placeholder="Huevos"
+              value={values[`${lot.id}:${size}`] ?? ""}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, [`${lot.id}:${size}`]: e.target.value }))
+              }
+              placeholder={size === "normal" ? "Huevos" : "Pequeños"}
               className="w-28"
             />
             <Button size="sm" disabled={pending} onClick={() => submit(lot.id)}>
