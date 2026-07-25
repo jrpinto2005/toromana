@@ -54,32 +54,25 @@ export function collectionMessage(ctx: CollectionContext): string {
 
     case "reciente":
       lines.push(
-        `${greeting}te escribimos para recordarte el saldo pendiente de ${amount}${since}.`,
+        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
       );
       break;
 
     case "atencion":
       lines.push(
-        `${greeting}tienes un saldo pendiente de ${amount}${since}, con ${ctx.daysOverdue} días de vencido.`,
+        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
       );
-      lines.push("¿Nos ayudas a ponerlo al día esta semana?");
       break;
 
     case "urgente":
       lines.push(
-        `${greeting}tu saldo pendiente es de ${amount}${since} y ya lleva ${ctx.daysOverdue} días.`,
-      );
-      lines.push(
-        "Necesitamos definir el pago para poder continuar con las entregas. ¿Qué fecha te queda bien?",
+        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
       );
       break;
 
     case "critico":
       lines.push(
-        `${greeting}tu saldo pendiente es de ${amount}${since}, con ${ctx.daysOverdue} días de vencido.`,
-      );
-      lines.push(
-        "Es una cuenta que ya lleva varios meses. Quedamos atentos a un acuerdo de pago para no suspender el servicio.",
+        `${greeting}tengo tu cuenta pendiente desde${since} por ${amount}, te cuadra?`,
       );
       break;
   }
@@ -88,11 +81,6 @@ export function collectionMessage(ctx: CollectionContext): string {
     lines.push(`Puedes pagar por transferencia a:\n${ctx.bankDetails.trim()}`);
   }
 
-  lines.push(
-    ctx.brandName?.trim()
-      ? `Gracias, ${ctx.brandName.trim()}.`
-      : "Gracias por tu atención.",
-  );
 
   return lines.join("\n\n");
 }
