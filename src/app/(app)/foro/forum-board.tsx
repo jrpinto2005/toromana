@@ -14,7 +14,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MentionInput } from './mention-input'
-import type { MentionablePerson } from '@/modules/forum/mentions'
+import { MentionText } from './mention-text'
+import { findMentions, type MentionablePerson } from '@/modules/forum/mentions'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/empty-state'
 
@@ -57,7 +58,12 @@ export function ForumBoard({
 
   return (
     <div className="space-y-6">
-      <NewPostForm customers={customers} runs={runs} team={team} />
+      <NewPostForm
+        customers={customers}
+        runs={runs}
+        team={team}
+        currentUserId={currentUserId}
+      />
 
       <div className="flex flex-wrap gap-2">
         {(
@@ -114,12 +120,18 @@ function NewPostForm({
   customers,
   runs,
   team,
+  currentUserId,
 }: {
   customers: Ref[]
   runs: RunRef[]
   team: MentionablePerson[]
+  currentUserId: string
 }) {
   const [kind, setKind] = useState<PostKind>('nota')
+  // El campo es controlado, así que React no lo limpia solo al enviar. Se
+  // remonta con la `key`, que es la forma documentada de reiniciar estado.
+  const [draft, setDraft] = useState('')
+  const [sent, setSent] = useState(0)
   const [customerQuery, setCustomerQuery] = useState('')
   const [customer, setCustomer] = useState<Ref | null>(null)
   const [pending, startTransition] = useTransition()
@@ -132,6 +144,8 @@ function NewPostForm({
         return
       }
       if (result.message) toast.success(result.message)
+      setDraft('')
+      setSent((n) => n + 1)
       setCustomer(null)
       setCustomerQuery('')
     })
@@ -161,13 +175,31 @@ function NewPostForm({
       <input type="hidden" name="kind" value={kind} />
 
       <MentionInput
+        key={sent}
         name="body"
         people={team}
+        onValueChange={setDraft}
         multiline
         required
         rows={3}
         placeholder="¿Qué pasó, qué se te ocurrió, qué quedó pendiente? Escribe @ para nombrar a alguien"
       />
+
+      {/* Quién va a recibir el correo, mientras se escribe. Enterarse después
+          de publicar —o no enterarse— es lo que hacía que una mención mal
+          escrita se perdiera sin que nadie lo notara. */}
+      {(() => {
+        const avisados = findMentions(draft, team, currentUserId)
+        if (avisados.length === 0) return null
+        return (
+          <p className="text-xs text-muted-foreground">
+            Le va a llegar aviso a{' '}
+            <span className="font-medium text-foreground">
+              {avisados.map((p) => p.fullName).join(', ')}
+            </span>
+          </p>
+        )
+      })()}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
@@ -228,13 +260,19 @@ function PostCard({
   team: MentionablePerson[]
 }) {
   const [showReply, setShowReply] = useState(false)
+  const [replySent, setReplySent] = useState(0)
   const [replying, startTransition] = useTransition()
 
   function replyFormAction(formData: FormData) {
     startTransition(async () => {
       const result = await replyAction(initial, formData)
-      if (result.error) toast.error(result.error)
-      else setShowReply(false)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      if (result.message) toast.success(result.message)
+      setReplySent((n) => n + 1)
+      setShowReply(false)
     })
   }
 
@@ -282,7 +320,11 @@ function PostCard({
         </div>
       </div>
 
-      <p className="mt-2 whitespace-pre-line text-sm">{post.body}</p>
+      <MentionText
+        body={post.body}
+        people={team}
+        className="mt-2 whitespace-pre-line text-sm"
+      />
 
       {post.replies.length > 0 && (
         <div className="mt-3 space-y-2 border-l-2 pl-3">
@@ -292,7 +334,11 @@ function PostCard({
               <span className="text-xs text-muted-foreground">
                 {formatShortDate(reply.createdAt.slice(0, 10))}
               </span>
-              <p className="whitespace-pre-line">{reply.body}</p>
+              <MentionText
+                body={reply.body}
+                people={team}
+                className="whitespace-pre-line"
+              />
             </div>
           ))}
         </div>
@@ -302,6 +348,7 @@ function PostCard({
         <form action={replyFormAction} className="mt-3 flex gap-2">
           <input type="hidden" name="postId" value={post.id} />
           <MentionInput
+            key={replySent}
             name="body"
             people={team}
             placeholder="Responder… escribe @ para nombrar a alguien"

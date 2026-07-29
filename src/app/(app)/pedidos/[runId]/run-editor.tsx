@@ -256,12 +256,13 @@ export function RunEditor({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visible.map((order) => (
+            {visible.map((order, rowIndex) => (
               <OrderRow
                 key={order.id}
                 order={order}
                 products={products}
                 runId={run.id}
+                rowIndex={rowIndex}
                 editable
                 mine={order.sellerId === currentSellerId}
               />
@@ -383,12 +384,14 @@ function OrderRow({
   order,
   products,
   runId,
+  rowIndex,
   editable,
   mine,
 }: {
   order: Order
   products: Product[]
   runId: string
+  rowIndex: number
   editable: boolean
   mine: boolean
 }) {
@@ -418,7 +421,7 @@ function OrderRow({
         )}
       </TableCell>
 
-      {products.map((product) => {
+      {products.map((product, colIndex) => {
         const item = byProduct.get(product.id)
         const offList = item && item.unitPriceCop !== product.listPriceCop
 
@@ -434,7 +437,11 @@ function OrderRow({
                   name="unitPrice"
                   value={item?.unitPriceCop ?? product.listPriceCop}
                 />
-                <QuantityInput current={item ? item.quantity : null} />
+                <QuantityInput
+                  current={item ? item.quantity : null}
+                  row={rowIndex}
+                  col={colIndex}
+                />
                 {offList && (
                   <span
                     className="text-[11px] text-amber-600"
@@ -485,19 +492,55 @@ function OrderRow({
  * rueda del mouse no edita el valor — suelta el foco y deja pasar el
  * desplazamiento, que ahora ocurre dentro de la tabla.
  *
+ * Las flechas arriba y abajo **mueven de celda**, no cambian el número. Es lo
+ * que hace un `input[type=number]` por su cuenta, y es exactamente lo contrario
+ * de lo que uno espera en una rejilla: se baja a la fila siguiente y en vez de
+ * eso el valor de la celda actual se mueve solo. Enter hace lo mismo que la
+ * flecha abajo, como en una hoja de cálculo.
+ *
+ * El `scroll-mt`/`scroll-mb` es para que al saltar de fila el navegador no
+ * deje la celda debajo del encabezado congelado o de la fila de totales.
+ *
  * Y solo se guarda si el valor cambió: recorrer la fila con Tab disparaba una
  * escritura por celda, cada una con su recálculo de totales y su revalidación.
  */
-function QuantityInput({ current }: { current: number | null }) {
+function QuantityInput({
+  current,
+  row,
+  col,
+}: {
+  current: number | null
+  row: number
+  col: number
+}) {
+  function moveTo(nextRow: number) {
+    const target = document.querySelector<HTMLInputElement>(
+      `[data-cell="${nextRow}:${col}"]`,
+    )
+    if (!target) return
+    target.focus()
+    target.select()
+  }
+
   return (
     <Input
       name="quantity"
       type="number"
       step="0.25"
       min="0"
+      data-cell={`${row}:${col}`}
       defaultValue={current ?? ''}
       placeholder="—"
       onWheel={(e) => e.currentTarget.blur()}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowDown' || e.key === 'Enter') {
+          e.preventDefault()
+          moveTo(row + 1)
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          moveTo(row - 1)
+        }
+      }}
       onBlur={(e) => {
         const raw = e.currentTarget.value.trim()
         const next = raw === '' ? null : Number(raw)
@@ -505,7 +548,7 @@ function QuantityInput({ current }: { current: number | null }) {
         if (next === current) return
         e.currentTarget.form?.requestSubmit()
       }}
-      className="no-spinner h-8 w-16 text-center"
+      className="no-spinner h-8 w-16 scroll-mt-16 scroll-mb-16 text-center"
     />
   )
 }

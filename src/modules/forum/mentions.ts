@@ -77,6 +77,51 @@ export function mentionAtCaret(
   return { query, start: caret - query.length - 1 }
 }
 
+/** La persona a la que responde un handle escrito, si existe alguna. */
+export function personForHandle(
+  handle: string,
+  people: MentionablePerson[],
+): MentionablePerson | null {
+  const clean = normalize(handle).replace(/^@/, '').replace(/[.]+$/, '')
+  return people.find((p) => handlesFor(p).includes(clean)) ?? null
+}
+
+export type MentionSegment = {
+  text: string
+  person: MentionablePerson | null
+}
+
+/**
+ * Parte el texto en trozos, marcando cuáles son menciones reconocidas.
+ *
+ * Solo se marca lo que corresponde a alguien del equipo. Que `@juanito` quede
+ * sin pintar no es un descuido: es la señal de que esa mención no le llegó a
+ * nadie, y verlo en el mensaje publicado es la única forma de enterarse.
+ */
+export function splitMentions(
+  body: string,
+  people: MentionablePerson[],
+): MentionSegment[] {
+  const segments: MentionSegment[] = []
+  let last = 0
+
+  for (const match of body.matchAll(/(^|\s)(@[\p{L}0-9_]+)/gu)) {
+    const start = (match.index ?? 0) + match[1].length
+    const raw = match[2]
+
+    if (start > last) {
+      segments.push({ text: body.slice(last, start), person: null })
+    }
+    segments.push({ text: raw, person: personForHandle(raw, people) })
+    last = start + raw.length
+  }
+
+  if (last < body.length) {
+    segments.push({ text: body.slice(last), person: null })
+  }
+  return segments
+}
+
 /** Todos los `@algo` que aparecen en el texto. */
 export function extractHandles(body: string): string[] {
   const matches = normalize(body).match(/@[a-z0-9_.]+/g) ?? []

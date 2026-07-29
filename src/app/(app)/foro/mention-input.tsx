@@ -35,12 +35,15 @@ export function MentionInput({
   people,
   multiline = false,
   className,
+  onValueChange,
   ...props
 }: {
   name: string
   people: MentionablePerson[]
   multiline?: boolean
   className?: string
+  /** Para que la pantalla pueda mostrar a quién se va a avisar. */
+  onValueChange?: (value: string) => void
 } & Omit<React.ComponentProps<'textarea'>, 'name' | 'className' | 'ref'>) {
   const ref = useRef<HTMLTextAreaElement & HTMLInputElement>(null)
   const [value, setValue] = useState('')
@@ -77,6 +80,7 @@ export function MentionInput({
     const next = value.slice(0, mention.start) + inserted + value.slice(caret)
 
     setValue(next)
+    onValueChange?.(next)
     setMention(null)
 
     const position = mention.start + inserted.length
@@ -114,6 +118,7 @@ export function MentionInput({
       e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
     ) => {
       setValue(e.target.value)
+      onValueChange?.(e.target.value)
       sync(e.target)
     },
     // El cursor también se mueve con clics y flechas: si no se recalcula, el
