@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
-import { listPosts } from '@/modules/forum'
+import { listMentionable, listPosts } from '@/modules/forum'
 import { listCustomers } from '@/modules/clients'
 import { listRuns } from '@/modules/orders'
 import { ForumBoard } from './forum-board'
@@ -13,10 +13,11 @@ export default async function ForoPage() {
   // El foro es conversación de operación y cartera; reparto no participa.
   if (profile.role === 'reparto') redirect('/ruta')
 
-  const [posts, customers, runs] = await Promise.all([
+  const [posts, customers, runs, team] = await Promise.all([
     listPosts(),
     listCustomers(),
     listRuns(),
+    listMentionable(),
   ])
 
   return (
@@ -35,6 +36,7 @@ export default async function ForoPage() {
         currentUserId={profile.id}
         customers={customers.map((c) => ({ id: c.id, name: c.name }))}
         runs={runs.map((r) => ({ id: r.id, date: r.deliveryDate }))}
+        team={team}
       />
     </div>
   )

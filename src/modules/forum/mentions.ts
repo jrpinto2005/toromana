@@ -34,6 +34,49 @@ function handlesFor(person: MentionablePerson): string[] {
   return [...handles]
 }
 
+/**
+ * El texto que hay que insertar para nombrar a alguien.
+ *
+ * Devuelve el primer nombre si nadie más del equipo lo comparte, y el nombre
+ * completo pegado si hay dos Anas. Vive junto a `findMentions` a propósito:
+ * son las dos caras de lo mismo, y separarlas es la forma segura de que el
+ * desplegable acabe insertando algo que el buscador no reconoce.
+ */
+export function handleFor(
+  person: MentionablePerson,
+  people: MentionablePerson[],
+): string {
+  const parts = normalize(person.fullName).trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return ''
+
+  const first = parts[0]
+  const collides = people.some(
+    (other) =>
+      other.id !== person.id &&
+      normalize(other.fullName).trim().split(/\s+/)[0] === first,
+  )
+
+  return collides ? parts.join('') : first
+}
+
+/**
+ * La mención que se está escribiendo justo antes del cursor.
+ *
+ * `null` si no hay ninguna. El `(^|\s)` antes de la arroba es lo que evita que
+ * escribir un correo abra el menú: en `hola@toromana.com` la arroba viene
+ * pegada a una letra, y eso no es una mención.
+ */
+export function mentionAtCaret(
+  value: string,
+  caret: number,
+): { query: string; start: number } | null {
+  const match = value.slice(0, caret).match(/(?:^|\s)@([\p{L}0-9._]*)$/u)
+  if (!match) return null
+
+  const query = match[1]
+  return { query, start: caret - query.length - 1 }
+}
+
 /** Todos los `@algo` que aparecen en el texto. */
 export function extractHandles(body: string): string[] {
   const matches = normalize(body).match(/@[a-z0-9_.]+/g) ?? []

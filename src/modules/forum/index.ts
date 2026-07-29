@@ -12,7 +12,12 @@ export {
   extractHandles,
   type MentionablePerson,
 } from './mentions'
-export { listPosts, countOpenPosts, type PostFilter } from './queries'
+export {
+  listPosts,
+  countOpenPosts,
+  listMentionable,
+  type PostFilter,
+} from './queries'
 export {
   createPost,
   replyToPost,

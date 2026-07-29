@@ -13,7 +13,8 @@ import {
 } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { MentionInput } from './mention-input'
+import type { MentionablePerson } from '@/modules/forum/mentions'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/empty-state'
 
@@ -34,11 +35,13 @@ export function ForumBoard({
   currentUserId,
   customers,
   runs,
+  team,
 }: {
   posts: Post[]
   currentUserId: string
   customers: Ref[]
   runs: RunRef[]
+  team: MentionablePerson[]
 }) {
   const [filter, setFilter] = useState<'todos' | 'abiertos' | PostKind>('todos')
 
@@ -54,7 +57,7 @@ export function ForumBoard({
 
   return (
     <div className="space-y-6">
-      <NewPostForm customers={customers} runs={runs} />
+      <NewPostForm customers={customers} runs={runs} team={team} />
 
       <div className="flex flex-wrap gap-2">
         {(
@@ -81,7 +84,12 @@ export function ForumBoard({
 
       <div className="space-y-3">
         {visible.map((post) => (
-          <PostCard key={post.id} post={post} currentUserId={currentUserId} />
+          <PostCard
+            key={post.id}
+            post={post}
+            currentUserId={currentUserId}
+            team={team}
+          />
         ))}
 
         {visible.length === 0 && (
@@ -102,7 +110,15 @@ export function ForumBoard({
   )
 }
 
-function NewPostForm({ customers, runs }: { customers: Ref[]; runs: RunRef[] }) {
+function NewPostForm({
+  customers,
+  runs,
+  team,
+}: {
+  customers: Ref[]
+  runs: RunRef[]
+  team: MentionablePerson[]
+}) {
   const [kind, setKind] = useState<PostKind>('nota')
   const [customerQuery, setCustomerQuery] = useState('')
   const [customer, setCustomer] = useState<Ref | null>(null)
@@ -144,11 +160,13 @@ function NewPostForm({ customers, runs }: { customers: Ref[]; runs: RunRef[] }) 
       </div>
       <input type="hidden" name="kind" value={kind} />
 
-      <Textarea
+      <MentionInput
         name="body"
+        people={team}
+        multiline
         required
         rows={3}
-        placeholder="¿Qué pasó, qué se te ocurrió, qué quedó pendiente?"
+        placeholder="¿Qué pasó, qué se te ocurrió, qué quedó pendiente? Escribe @ para nombrar a alguien"
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -203,9 +221,11 @@ function NewPostForm({ customers, runs }: { customers: Ref[]; runs: RunRef[] }) 
 function PostCard({
   post,
   currentUserId,
+  team,
 }: {
   post: Post
   currentUserId: string
+  team: MentionablePerson[]
 }) {
   const [showReply, setShowReply] = useState(false)
   const [replying, startTransition] = useTransition()
@@ -281,7 +301,14 @@ function PostCard({
       {showReply ? (
         <form action={replyFormAction} className="mt-3 flex gap-2">
           <input type="hidden" name="postId" value={post.id} />
-          <Input name="body" placeholder="Responder…" required autoFocus />
+          <MentionInput
+            name="body"
+            people={team}
+            placeholder="Responder… escribe @ para nombrar a alguien"
+            required
+            autoFocus
+            className="flex-1"
+          />
           <Button type="submit" size="sm" disabled={replying}>
             Enviar
           </Button>

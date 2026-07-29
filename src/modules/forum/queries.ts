@@ -86,3 +86,23 @@ export async function countOpenPosts(): Promise<number> {
 
   return count ?? 0
 }
+
+/**
+ * A quién se puede nombrar con `@`.
+ *
+ * Todo el equipo menos reparto, que no participa del foro. Nombrar a alguien
+ * que no lo lee sería prometer un aviso que nunca llega.
+ */
+export async function listMentionable(): Promise<
+  { id: string; fullName: string }[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .neq('role', 'reparto')
+    .order('full_name')
+
+  if (error) throw new Error(`No pude cargar el equipo: ${error.message}`)
+  return (data ?? []).map((p) => ({ id: p.id, fullName: p.full_name }))
+}
