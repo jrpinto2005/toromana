@@ -7,6 +7,11 @@
 
 export type { Post, PostKind, Reply } from './types'
 export { KIND_LABEL } from './types'
+export {
+  findMentions,
+  extractHandles,
+  type MentionablePerson,
+} from './mentions'
 export { listPosts, countOpenPosts, type PostFilter } from './queries'
 export {
   createPost,
