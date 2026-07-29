@@ -136,6 +136,31 @@ export async function getRouteStops(runId: string): Promise<RouteStop[]> {
 }
 
 /**
+ * Los pedidos institucionales de una semana, en el orden de la ruta.
+ *
+ * Son los que se despachan contra un recibo firmado, y quien reparte los
+ * necesita todos impresos antes de salir. Uno por uno son cuatro pestañas y
+ * cuatro diálogos de impresión; lo que hoy pasa es que alguien se salta el
+ * último y la entrega llega sin papel que firmar.
+ */
+export async function listInstitutionalOrderIds(runId: string): Promise<string[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, route_position, customers!inner(kind)")
+    .eq("run_id", runId)
+    .eq("customers.kind", "institucional")
+    .order("route_position", { ascending: true, nullsFirst: false });
+
+  if (error) {
+    throw new Error(`No pude cargar los pedidos institucionales: ${error.message}`);
+  }
+
+  return (data ?? []).map((row) => row.id);
+}
+
+/**
  * Datos completos para imprimir un recibo: pedido, cliente, empresa y el
  * consecutivo ya generado si lo hay. No genera el número aquí — eso lo hace
  * `generatePurchaseOrdersForRun` una sola vez, al confirmar.

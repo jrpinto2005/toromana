@@ -53,7 +53,10 @@ export default async function PrintRoutePage({
       <style>{`
         @media print {
           header, .no-print { display: none !important; }
-          @page { size: letter landscape; margin: 0.5in; }
+          /* Margen cero en la página, y el margen real como relleno del bloque.
+             Es lo que suprime el encabezado y el pie que el navegador imprime
+             por su cuenta, donde va la URL de la app. */
+          @page { size: letter landscape; margin: 0; }
           table { page-break-inside: auto; }
           tr { page-break-inside: avoid; }
           thead { display: table-header-group; }
@@ -72,7 +75,7 @@ export default async function PrintRoutePage({
         <PrintButton />
       </div>
 
-      <div className="mx-auto w-[10in] bg-white p-8 shadow-sm print:w-auto print:p-0 print:shadow-none">
+      <div className="mx-auto w-[10in] bg-white p-8 shadow-sm print:w-auto print:p-[0.5in] print:shadow-none">
         <table
           className="w-full border-collapse"
           style={{ fontFamily: 'Calibri, Arial, Helvetica, sans-serif', fontSize: '10.5px' }}

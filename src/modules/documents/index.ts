@@ -16,6 +16,13 @@ export type {
   OrderStatus,
 } from "./types";
 
-export { getActiveRun, listDeliverableRuns, getRun, getRouteStops, getReceipt } from "./queries";
+export {
+  getActiveRun,
+  listDeliverableRuns,
+  getRun,
+  getRouteStops,
+  getReceipt,
+  listInstitutionalOrderIds,
+} from "./queries";
 export { markDelivered, undoDelivered, generatePurchaseOrdersForRun } from "./actions";
 export { routeToCsv } from "./csv";

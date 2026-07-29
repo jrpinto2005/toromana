@@ -57,15 +57,27 @@ export default async function RutaPage({
           {runs.length > 1 && <RunPicker runs={runs} current={run.id} />}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <CsvButton stops={stops} deliveryDate={run.deliveryDate} />
+          {/* El run va en la URL: sin él, quien está mirando una semana
+              anterior imprime la de hoy sin darse cuenta. */}
           <Button
             variant="outline"
             size="sm"
-            render={<Link href="/ruta/imprimir" target="_blank" />}
+            render={<Link href={`/ruta/imprimir?run=${run.id}`} target="_blank" />}
           >
             <Printer />
-            Imprimir
+            Imprimir lista
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            render={
+              <Link href={`/ruta/institucional?run=${run.id}`} target="_blank" />
+            }
+          >
+            <Printer />
+            Recibos institucionales
           </Button>
         </div>
       </div>
