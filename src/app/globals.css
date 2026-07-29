@@ -128,3 +128,24 @@
     @apply font-sans;
   }
 }
+
+/**
+ * Campo numérico sin las flechas de incremento del navegador.
+ *
+ * En la rejilla de pedidos cada celda es un `input[type=number]`, y los
+ * spinners sobran de dos maneras: se comen ancho en una tabla que ya es ancha,
+ * y un clic desviado sube o baja media cubeta sin que nadie lo note. Quien
+ * digita el pedido escribe la cantidad, no la incrementa de a pasos.
+ *
+ * El `type=number` se conserva: valida la entrada y abre el teclado numérico
+ * en el celular, que es donde reparto lo usa.
+ */
+@utility no-spinner {
+  -moz-appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}

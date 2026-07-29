@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getRunDetail } from '@/modules/orders'
-import { listCustomers, listProducts } from '@/modules/clients'
+import { listCustomers, listProducts, listSellers } from '@/modules/clients'
 import { getProfile } from '@/lib/auth'
 import { formatWeekdayDate } from '@/lib/dates'
 import { formatCop } from '@/lib/money'
@@ -15,10 +15,11 @@ export default async function RunPage({
   params: Promise<{ runId: string }>
 }) {
   const { runId } = await params
-  const [detail, products, customers, profile] = await Promise.all([
+  const [detail, products, customers, sellers, profile] = await Promise.all([
     getRunDetail(runId),
     listProducts(),
     listCustomers(),
+    listSellers(),
     getProfile(),
   ])
 
@@ -50,10 +51,25 @@ export default async function RunPage({
           <Button variant="outline" render={<Link href="/pedidos" />}>
             Volver
           </Button>
+          {/* Los recibos existen desde que se confirma: es ahí donde se
+              numeran las órdenes de compra. */}
           {run.status !== 'borrador' && (
-            <Button variant="outline" render={<Link href="/ruta" />}>
-              Ver ruta
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                render={
+                  <Link
+                    href={`/ruta/institucional?run=${run.id}`}
+                    target="_blank"
+                  />
+                }
+              >
+                Recibos institucionales
+              </Button>
+              <Button variant="outline" render={<Link href="/ruta" />}>
+                Ver ruta
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -66,6 +82,7 @@ export default async function RunPage({
         candidates={customers
           .filter((c) => !inRun.has(c.id))
           .map((c) => ({ id: c.id, name: c.name }))}
+        sellers={sellers}
         currentSellerId={profile?.id ?? null}
       />
     </div>

@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 import { formatCop, formatQuantity } from '@/lib/money'
 import type { DeliveryRun, Order, PausedCustomer } from '@/modules/orders/types'
+import type { Seller } from '@/modules/clients/types'
 import {
   addCustomerAction,
   confirmRunAction,
@@ -13,6 +15,7 @@ import {
   setItemAction,
   type RunActionState,
 } from '../actions'
+import { NewCustomerDialog } from './new-customer-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +23,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -30,12 +34,28 @@ type Candidate = { id: string; name: string }
 
 const initial: RunActionState = { error: null, message: null }
 
+/**
+ * Encabezado y columna de cliente congelados, como los paneles inmovilizados
+ * del Excel que esto reemplaza. Con ocho productos y sesenta entregas, sin esto
+ * uno termina contando columnas con el dedo para saber qué está digitando.
+ *
+ * La tabla va en `border-separate`: con `border-collapse` —el default de
+ * Tailwind— los bordes de una celda `sticky` se pintan en su posición original
+ * y la rejilla se deshace al desplazarse. En modo separado cada celda conserva
+ * el suyo, por eso los bordes se declaran en las celdas y no en la fila.
+ */
+const GRID =
+  'border-separate border-spacing-0 [&_td]:border-b [&_th]:border-b'
+const STICKY_HEAD = 'sticky top-0 z-20 bg-background'
+const STICKY_COL = 'sticky left-0 bg-background'
+
 export function RunEditor({
   run,
   orders,
   paused,
   products,
   candidates,
+  sellers,
   currentSellerId,
 }: {
   run: DeliveryRun
@@ -43,6 +63,7 @@ export function RunEditor({
   paused: PausedCustomer[]
   products: Product[]
   candidates: Candidate[]
+  sellers: Seller[]
   currentSellerId: string | null
 }) {
   const router = useRouter()
@@ -57,6 +78,40 @@ export function RunEditor({
   const [addedCount, setAddedCount] = useState(0)
   const [adding, startTransition] = useTransition()
   const [confirming, startConfirm] = useTransition()
+
+  // Filtro sobre las entregas ya incluidas. Es distinto del buscador que agrega
+  // clientes: aquí no se trae a nadie, se va a una fila concreta entre sesenta
+  // para corregirle la cantidad.
+  const [search, setSearch] = useState('')
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return orders
+    return orders.filter(
+      (o) =>
+        o.customerName.toLowerCase().includes(q) ||
+        (o.customerAddress ?? '').toLowerCase().includes(q),
+    )
+  }, [orders, search])
+
+  const filtering = visible.length !== orders.length
+
+  // Los totales suman lo que está a la vista: es la cifra que se contrasta
+  // contra lo que hay que empacar, y tiene que corresponder a lo que se lee.
+  const totals = useMemo(() => {
+    const byProduct = new Map<string, number>()
+    let totalCop = 0
+    for (const order of visible) {
+      totalCop += order.totalCop
+      for (const item of order.items) {
+        byProduct.set(
+          item.productId,
+          (byProduct.get(item.productId) ?? 0) + item.quantity,
+        )
+      }
+    }
+    return { byProduct, totalCop }
+  }, [visible])
 
   function addAction(formData: FormData) {
     startTransition(async () => {
@@ -117,6 +172,11 @@ export function RunEditor({
           action={addAction}
           pending={adding}
         />
+        <NewCustomerDialog
+          runId={run.id}
+          sellers={sellers}
+          currentSellerId={currentSellerId}
+        />
         <span className="text-xs text-muted-foreground">
           Los cambios se guardan solos.
         </span>
@@ -155,25 +215,48 @@ export function RunEditor({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border bg-background">
-        <Table>
+      {orders.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            placeholder="Buscar en este pedido…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          <span className="text-sm text-muted-foreground">
+            {filtering
+              ? `${visible.length} de ${orders.length} entregas`
+              : `${orders.length} entrega${orders.length === 1 ? '' : 's'}`}
+          </span>
+        </div>
+      )}
+
+      <div className="rounded-lg border bg-background">
+        <Table
+          containerClassName="max-h-[70dvh] overflow-auto rounded-lg"
+          className={GRID}
+        >
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-56">Cliente</TableHead>
+              <TableHead className={cn(STICKY_HEAD, STICKY_COL, 'z-30 min-w-56')}>
+                Cliente
+              </TableHead>
               {products.map((p) => (
-                <TableHead key={p.id} className="text-center">
+                <TableHead key={p.id} className={cn(STICKY_HEAD, 'text-center')}>
                   {p.name}
                   <span className="block text-xs font-normal text-muted-foreground">
                     {p.unit}
                   </span>
                 </TableHead>
               ))}
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className={cn(STICKY_HEAD, 'text-right')}>
+                Total
+              </TableHead>
+              <TableHead className={cn(STICKY_HEAD, 'w-10')} />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => (
+            {visible.map((order) => (
               <OrderRow
                 key={order.id}
                 order={order}
@@ -183,19 +266,65 @@ export function RunEditor({
                 mine={order.sellerId === currentSellerId}
               />
             ))}
-            {orders.length === 0 && (
+            {visible.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={products.length + 3}
                   className="py-10 text-center text-muted-foreground"
                 >
-                  <span className="font-medium">Este pedido quedó vacío.</span>{' '}
-                  Agrega clientes con el buscador de arriba, o revisa en
-                  Fijos quién debería entrar solo cada semana.
+                  {orders.length === 0 ? (
+                    <>
+                      <span className="font-medium">
+                        Este pedido quedó vacío.
+                      </span>{' '}
+                      Agrega clientes con el buscador de arriba, o revisa en
+                      Fijos quién debería entrar solo cada semana.
+                    </>
+                  ) : (
+                    <>
+                      Ninguna entrega de este pedido coincide con{' '}
+                      <span className="font-medium">{search}</span>.
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
+
+          {visible.length > 0 && (
+            <TableFooter className="bg-background">
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  className={cn(
+                    STICKY_COL,
+                    'sticky bottom-0 z-30 border-t font-medium',
+                  )}
+                >
+                  {filtering ? 'Total filtrado' : 'Total'}
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {visible.length} entrega{visible.length === 1 ? '' : 's'}
+                  </span>
+                </TableCell>
+
+                {products.map((p) => {
+                  const quantity = totals.byProduct.get(p.id) ?? 0
+                  return (
+                    <TableCell
+                      key={p.id}
+                      className="sticky bottom-0 z-20 border-t bg-background text-center font-medium tabular-nums"
+                    >
+                      {quantity ? formatQuantity(quantity) : '—'}
+                    </TableCell>
+                  )
+                })}
+
+                <TableCell className="sticky bottom-0 z-20 border-t bg-background text-right font-semibold tabular-nums">
+                  {formatCop(totals.totalCop)}
+                </TableCell>
+                <TableCell className="sticky bottom-0 z-20 border-t bg-background" />
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
     </div>
@@ -267,7 +396,17 @@ function OrderRow({
 
   return (
     <TableRow className={mine ? 'bg-primary/5' : undefined}>
-      <TableCell>
+      {/* La celda congelada va opaca: si fuera translúcida, las columnas de
+          producto se verían por debajo al desplazarse en horizontal. El tinte
+          de "mis clientes" se superpone encima para no perderlo. */}
+      <TableCell
+        className={cn(
+          STICKY_COL,
+          'relative z-10',
+          mine &&
+            'before:pointer-events-none before:absolute before:inset-0 before:bg-primary/5',
+        )}
+      >
         <div className="font-medium">{order.customerName}</div>
         <div className="text-xs text-muted-foreground">
           {order.customerAddress ?? 'Sin dirección'}
@@ -295,16 +434,7 @@ function OrderRow({
                   name="unitPrice"
                   value={item?.unitPriceCop ?? product.listPriceCop}
                 />
-                <Input
-                  name="quantity"
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  defaultValue={item ? item.quantity : ''}
-                  placeholder="—"
-                  onBlur={(e) => e.currentTarget.form?.requestSubmit()}
-                  className="h-8 w-16 text-center"
-                />
+                <QuantityInput current={item ? item.quantity : null} />
                 {offList && (
                   <span
                     className="text-[11px] text-amber-600"
@@ -344,5 +474,38 @@ function OrderRow({
         </TableCell>
       )}
     </TableRow>
+  )
+}
+
+/**
+ * Celda de cantidad.
+ *
+ * Sin las flechas del navegador: en una rejilla de este ancho se comen espacio,
+ * y un clic desviado sube media cubeta sin que nadie lo note. Por lo mismo, la
+ * rueda del mouse no edita el valor — suelta el foco y deja pasar el
+ * desplazamiento, que ahora ocurre dentro de la tabla.
+ *
+ * Y solo se guarda si el valor cambió: recorrer la fila con Tab disparaba una
+ * escritura por celda, cada una con su recálculo de totales y su revalidación.
+ */
+function QuantityInput({ current }: { current: number | null }) {
+  return (
+    <Input
+      name="quantity"
+      type="number"
+      step="0.25"
+      min="0"
+      defaultValue={current ?? ''}
+      placeholder="—"
+      onWheel={(e) => e.currentTarget.blur()}
+      onBlur={(e) => {
+        const raw = e.currentTarget.value.trim()
+        const next = raw === '' ? null : Number(raw)
+        if (next !== null && Number.isNaN(next)) return
+        if (next === current) return
+        e.currentTarget.form?.requestSubmit()
+      }}
+      className="no-spinner h-8 w-16 text-center"
+    />
   )
 }

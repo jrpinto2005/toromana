@@ -26,12 +26,34 @@ import {
 
 const initialState: ActionState = { error: null, message: null }
 
+/**
+ * `Select.Value` de Base UI pinta el valor crudo del item, no su etiqueta,
+ * salvo que `Select.Root` reciba `items`. Con `kind` o `recurrence` el valor ya
+ * es una palabra legible y el detalle pasa inadvertido; con el vendedor, el
+ * valor es su UUID y el usuario ve el id en vez del nombre.
+ */
+const KIND_ITEMS = [
+  { value: 'natural', label: 'Natural' },
+  { value: 'institucional', label: 'Institucional' },
+]
+
+const RECURRENCE_ITEMS = [
+  { value: 'semanal', label: 'Semanal' },
+  { value: 'quincenal', label: 'Quincenal' },
+  { value: 'ocasional', label: 'Ocasional' },
+]
+
 export function NewCustomerDialog({ sellers }: { sellers: Seller[] }) {
   const [open, setOpen] = useState(false)
   // El resultado se atiende dentro de la transición, no en un efecto: cerrar
   // el diálogo desde un `useEffect` provoca renders en cascada y React 19 lo
   // marca como error. Aquí el `setState` ocurre en el manejador, que es su sitio.
   const [pending, startTransition] = useTransition()
+
+  const sellerItems = [
+    { value: 'none', label: 'Sin asignar' },
+    ...sellers.map((s) => ({ value: s.id, label: s.fullName })),
+  ]
 
   function submit(formData: FormData) {
     startTransition(async () => {
@@ -79,15 +101,14 @@ export function NewCustomerDialog({ sellers }: { sellers: Seller[] }) {
 
             <div className="space-y-2">
               <Label htmlFor="sellerId">Vendedor</Label>
-              <Select name="sellerId" defaultValue="none">
-                <SelectTrigger id="sellerId">
+              <Select name="sellerId" defaultValue="none" items={sellerItems}>
+                <SelectTrigger id="sellerId" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {sellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.fullName}
+                  {sellerItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -98,27 +119,36 @@ export function NewCustomerDialog({ sellers }: { sellers: Seller[] }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="kind">Tipo</Label>
-              <Select name="kind" defaultValue="natural">
-                <SelectTrigger id="kind">
+              <Select name="kind" defaultValue="natural" items={KIND_ITEMS}>
+                <SelectTrigger id="kind" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="natural">Natural</SelectItem>
-                  <SelectItem value="institucional">Institucional</SelectItem>
+                  {KIND_ITEMS.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="recurrence">Frecuencia</Label>
-              <Select name="recurrence" defaultValue="ocasional">
-                <SelectTrigger id="recurrence">
+              <Select
+                name="recurrence"
+                defaultValue="ocasional"
+                items={RECURRENCE_ITEMS}
+              >
+                <SelectTrigger id="recurrence" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="semanal">Semanal</SelectItem>
-                  <SelectItem value="quincenal">Quincenal</SelectItem>
-                  <SelectItem value="ocasional">Ocasional</SelectItem>
+                  {RECURRENCE_ITEMS.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
